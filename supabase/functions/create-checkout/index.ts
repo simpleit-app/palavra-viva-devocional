@@ -27,15 +27,26 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    if (!STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    if (!STRIPE_SECRET_KEY) {
+      logStep("ERROR: STRIPE_SECRET_KEY is not set");
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
+    
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      logStep("ERROR: SUPABASE_SERVICE_ROLE_KEY is not set");
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+    }
+    
+    logStep("Environment variables verified");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      logStep("ERROR: No authorization header provided");
       throw new Error("No authorization header provided");
     }
 
     const token = authHeader.replace("Bearer ", "");
+    logStep("Token extracted from header");
     
     // Create Supabase client
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -43,13 +54,22 @@ serve(async (req) => {
     });
     
     // Verify user
+    logStep("Verifying user with token");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    
     if (userError) {
+      logStep(`ERROR: Authentication error: ${userError.message}`);
       throw new Error(`Authentication error: ${userError.message}`);
+    }
+    
+    if (!userData?.user) {
+      logStep("ERROR: User data not found");
+      throw new Error("User not found");
     }
     
     const user = userData.user;
     if (!user?.email) {
+      logStep("ERROR: User email not available");
       throw new Error("User not authenticated or email not available");
     }
     
@@ -66,6 +86,7 @@ serve(async (req) => {
       .single();
       
     if (subscribersError && subscribersError.code !== "PGRST116") {
+      logStep(`ERROR: Error fetching subscriber: ${subscribersError.message}`);
       throw new Error(`Error fetching subscriber: ${subscribersError.message}`);
     }
     
@@ -93,6 +114,7 @@ serve(async (req) => {
           }, { onConflict: 'user_id' });
       } else {
         // Create a new customer
+        logStep("Creating new Stripe customer");
         const newCustomer = await stripe.customers.create({
           email: user.email,
           name: user.user_metadata?.name || user.email,
@@ -115,6 +137,7 @@ serve(async (req) => {
     }
     
     // Create checkout session with the specific price ID
+    logStep("Creating checkout session");
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
