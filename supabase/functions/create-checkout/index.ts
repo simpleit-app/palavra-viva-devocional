@@ -12,6 +12,12 @@ const SUPABASE_URL = "https://mcoeiucylazrjvhaemmc.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 
+// Helper logging function
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -19,6 +25,11 @@ serve(async (req) => {
   }
 
   try {
+    logStep("Function started");
+
+    if (!STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not set");
+    logStep("Stripe key verified");
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("No authorization header provided");
@@ -42,7 +53,7 @@ serve(async (req) => {
       throw new Error("User not authenticated or email not available");
     }
     
-    console.log("Creating checkout for user:", user.email);
+    logStep("Creating checkout for user:", { email: user.email, userId: user.id });
     
     // Initialize Stripe
     const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
@@ -62,27 +73,50 @@ serve(async (req) => {
     
     if (subscribers?.stripe_customer_id) {
       customerId = subscribers.stripe_customer_id;
-      console.log("Using existing Stripe customer:", customerId);
+      logStep("Using existing Stripe customer:", { customerId });
     } else {
       // If no customer ID found, look up by email or create new customer
       const customers = await stripe.customers.list({ email: user.email, limit: 1 });
       
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
-        console.log("Found Stripe customer by email:", customerId);
+        logStep("Found Stripe customer by email:", { customerId });
         
         // Update the subscriber record with the customer ID
         await supabaseClient
           .from("subscribers")
-          .update({ stripe_customer_id: customerId })
-          .eq("user_id", user.id);
+          .upsert({ 
+            user_id: user.id,
+            email: user.email,
+            stripe_customer_id: customerId,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      } else {
+        // Create a new customer
+        const newCustomer = await stripe.customers.create({
+          email: user.email,
+          name: user.user_metadata?.name || user.email,
+        });
+        customerId = newCustomer.id;
+        logStep("Created new Stripe customer:", { customerId });
+        
+        // Insert new subscriber record
+        await supabaseClient
+          .from("subscribers")
+          .upsert({ 
+            user_id: user.id,
+            email: user.email,
+            stripe_customer_id: customerId,
+            subscription_tier: "free",
+            subscribed: false,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
       }
     }
     
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
       line_items: [
         {
           price_data: {
@@ -102,14 +136,17 @@ serve(async (req) => {
       cancel_url: `${req.headers.get("origin")}/dashboard?canceled=true`,
     });
     
+    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("Error in create-checkout:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error in create-checkout:", errorMessage);
     
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

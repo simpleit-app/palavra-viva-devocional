@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2, CreditCard } from 'lucide-react';
 
 interface SubscriptionUpgradeProps {
   variant?: 'default' | 'inline' | 'card';
@@ -21,6 +21,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   const { currentUser, refreshSubscription, isPro } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
+  const [portalLoading, setPortalLoading] = React.useState(false);
 
   const handleUpgrade = async () => {
     if (!currentUser) return;
@@ -63,25 +64,89 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     }
   };
 
+  const handleManageSubscription = async () => {
+    if (!currentUser || !isPro) return;
+    
+    setPortalLoading(true);
+    
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      if (!token) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("Não foi possível acessar o portal do cliente");
+      }
+      
+    } catch (error: any) {
+      console.error("Error accessing customer portal:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao acessar portal",
+        description: error.message || "Ocorreu um erro ao acessar o portal de gerenciamento. Tente novamente mais tarde.",
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
   // For inline variant, render just a button
   if (variant === 'inline') {
     return (
-      <Button 
-        onClick={handleUpgrade} 
-        disabled={loading || isPro}
-        className="w-full"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processando...
-          </>
-        ) : isPro ? (
-          "Você já possui o Plano Pro"
-        ) : (
-          "Atualizar para o Plano Pro"
+      <div className="w-full space-y-2">
+        <Button 
+          onClick={handleUpgrade} 
+          disabled={loading || isPro}
+          className="w-full"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processando...
+            </>
+          ) : isPro ? (
+            "Você já possui o Plano Pro"
+          ) : (
+            "Atualizar para o Plano Pro"
+          )}
+        </Button>
+
+        {isPro && (
+          <Button 
+            variant="outline"
+            onClick={handleManageSubscription}
+            disabled={portalLoading}
+            className="w-full"
+          >
+            {portalLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Acessando...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Gerenciar assinatura
+              </>
+            )}
+          </Button>
         )}
-      </Button>
+      </div>
     );
   }
   
@@ -131,7 +196,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
             </Alert>
           )}
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col gap-2">
           <Button 
             onClick={handleUpgrade}
             disabled={loading || isPro}
@@ -148,6 +213,27 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
               "Assinar agora"
             )}
           </Button>
+
+          {isPro && (
+            <Button 
+              variant="outline"
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="w-full"
+            >
+              {portalLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Acessando...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Gerenciar assinatura
+                </>
+              )}
+            </Button>
+          )}
         </CardFooter>
       </Card>
     );
@@ -181,22 +267,45 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
         </ul>
       )}
       
-      <Button 
-        onClick={handleUpgrade}
-        disabled={loading || isPro}
-        className="w-full"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processando...
-          </>
-        ) : isPro ? (
-          "Você já possui o Plano Pro"
-        ) : (
-          "Atualizar para o Plano Pro"
+      <div className="space-y-2">
+        <Button 
+          onClick={handleUpgrade}
+          disabled={loading || isPro}
+          className="w-full"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processando...
+            </>
+          ) : isPro ? (
+            "Você já possui o Plano Pro"
+          ) : (
+            "Atualizar para o Plano Pro"
+          )}
+        </Button>
+        
+        {isPro && (
+          <Button 
+            variant="outline"
+            onClick={handleManageSubscription}
+            disabled={portalLoading}
+            className="w-full"
+          >
+            {portalLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Acessando...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Gerenciar assinatura
+              </>
+            )}
+          </Button>
         )}
-      </Button>
+      </div>
       
       {isPro && currentUser?.subscriptionEnd && (
         <p className="text-xs text-center mt-2 text-muted-foreground">

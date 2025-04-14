@@ -107,7 +107,7 @@ serve(async (req) => {
       }
       
       const customerId = customers.data[0].id;
-      logStep("Found Stripe customer, updating ID", { customerId });
+      logStep("Found Stripe customer by email:", { customerId });
       
       await supabaseClient
         .from("subscribers")
