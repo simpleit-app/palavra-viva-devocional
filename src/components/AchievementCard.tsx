@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { icons } from 'lucide-react';
+import { Award } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { Achievement } from '@/data/bibleData';
 import { calculateProgress } from '@/utils/achievementUtils';
+import * as LucideIcons from 'lucide-react';
 
 interface AchievementCardProps {
   achievement: Achievement;
@@ -16,15 +17,21 @@ interface AchievementCardProps {
   unlocked: boolean;
 }
 
-type IconName = keyof typeof icons;
-
 const AchievementCard: React.FC<AchievementCardProps> = ({
   achievement,
   userStats,
   unlocked
 }) => {
   const progress = calculateProgress(achievement, userStats);
-  const Icon = icons[achievement.icon as IconName] || icons.award;
+  
+  // Convert kebab-case or lowercase icon names to PascalCase for Lucide icons
+  const getIconComponent = (iconName: string) => {
+    // Convert first character to uppercase and the rest as is
+    const pascalCaseName = iconName.charAt(0).toUpperCase() + iconName.slice(1);
+    return LucideIcons[pascalCaseName as keyof typeof LucideIcons] || Award;
+  };
+  
+  const Icon = getIconComponent(achievement.icon);
   
   return (
     <Card className={`achievement-card border ${unlocked ? 'border-gold-400' : 'border-slate-200 dark:border-slate-700'}`}>
