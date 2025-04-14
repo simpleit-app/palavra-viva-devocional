@@ -24,11 +24,16 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
 }) => {
   const progress = calculateProgress(achievement, userStats);
   
-  // Convert kebab-case or lowercase icon names to PascalCase for Lucide icons
+  // Convert icon name to component
   const getIconComponent = (iconName: string) => {
-    // Convert first character to uppercase and the rest as is
-    const pascalCaseName = iconName.charAt(0).toUpperCase() + iconName.slice(1);
-    const IconComponent = LucideIcons[pascalCaseName as keyof typeof LucideIcons] || Award;
+    // Handle common icon naming variations
+    const formattedName = iconName
+      .split('-')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join('');
+    
+    // Look up the icon in Lucide icons
+    const IconComponent = (LucideIcons as Record<string, React.FC<any>>)[formattedName] || Award;
     return IconComponent;
   };
   
