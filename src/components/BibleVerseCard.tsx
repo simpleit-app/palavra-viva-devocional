@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, BookOpen } from "lucide-react";
 import { BibleVerse, UserReflection } from '@/data/bibleData';
+import { cn } from '@/lib/utils';
 
 interface BibleVerseCardProps {
   verse: BibleVerse;
@@ -12,6 +13,7 @@ interface BibleVerseCardProps {
   userReflection?: UserReflection;
   onMarkAsRead: (verseId: string) => void;
   onSaveReflection: (verseId: string, text: string) => void;
+  highlight?: boolean;
 }
 
 const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
@@ -19,7 +21,8 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   isRead,
   userReflection,
   onMarkAsRead,
-  onSaveReflection
+  onSaveReflection,
+  highlight = false
 }) => {
   const [reflection, setReflection] = React.useState(userReflection?.text || '');
 
@@ -30,7 +33,10 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   };
 
   return (
-    <Card className="w-full mb-6 bible-card overflow-hidden border shadow-sm">
+    <Card className={cn(
+      "w-full mb-6 bible-card overflow-hidden border shadow-sm transition-all duration-300",
+      highlight && "ring-2 ring-primary ring-offset-2 bg-primary/5"
+    )}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between">
           <span>{verse.book} {verse.chapter}:{verse.verse}</span>

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/PageTitle';
 import BibleVerseCard from '@/components/BibleVerseCard';
 import { bibleVerses } from '@/data/bibleData';
@@ -7,11 +9,22 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { UserReflection } from '@/data/bibleData';
 
+// Define a type for the location state
+interface LocationState {
+  scrollToVerse?: string;
+}
+
 const StudyRoutePage: React.FC = () => {
   const { currentUser, updateProfile } = useAuth();
   const [readVerses, setReadVerses] = useState<string[]>([]);
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
+  const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const location = useLocation();
+
+  // Extract scrollToVerse from location state
+  const locationState = location.state as LocationState;
+  const scrollToVerseId = locationState?.scrollToVerse;
 
   useEffect(() => {
     if (currentUser) {
@@ -19,6 +32,18 @@ const StudyRoutePage: React.FC = () => {
       updateUserStreak();
     }
   }, [currentUser]);
+
+  // Handle scrolling to a specific verse when it's specified in the location state
+  useEffect(() => {
+    if (scrollToVerseId && verseRefs.current[scrollToVerseId] && !loading) {
+      setTimeout(() => {
+        verseRefs.current[scrollToVerseId]?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [scrollToVerseId, loading]);
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -248,14 +273,20 @@ const StudyRoutePage: React.FC = () => {
             );
 
             return (
-              <BibleVerseCard
+              <div 
                 key={verse.id}
-                verse={verse}
-                isRead={isRead}
-                userReflection={userReflection}
-                onMarkAsRead={handleMarkAsRead}
-                onSaveReflection={handleSaveReflection}
-              />
+                ref={el => verseRefs.current[verse.id] = el}
+                className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
+              >
+                <BibleVerseCard
+                  verse={verse}
+                  isRead={isRead}
+                  userReflection={userReflection}
+                  onMarkAsRead={handleMarkAsRead}
+                  onSaveReflection={handleSaveReflection}
+                  highlight={scrollToVerseId === verse.id}
+                />
+              </div>
             );
           })}
         </div>

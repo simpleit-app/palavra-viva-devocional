@@ -4,10 +4,11 @@ import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, Share2 } from 'lucide-react';
+import { Edit2, Trash2, Share2, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { Link } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -266,6 +267,19 @@ const ReflectionsPage: React.FC = () => {
                       {reflection.text}
                     </p>
                   )}
+
+                  <div className="mt-4">
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto text-primary flex items-center gap-1"
+                      asChild
+                    >
+                      <Link to={`/study-route`} state={{ scrollToVerse: reflection.verseId }}>
+                        <BookOpen className="h-4 w-4" />
+                        <span>Ver texto de estudo completo</span>
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
                   {editingReflection === reflection.id ? (
