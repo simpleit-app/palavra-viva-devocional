@@ -50,18 +50,18 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-// Esquema de validação para o formulário de perfil
+// Schema for profile form validation
 const profileFormSchema = z.object({
-  name: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
+  name: z.string().min(2, { message: 'Name must have at least 2 characters' }),
 });
 
-// Esquema de validação para o formulário de senha
+// Schema for password form validation
 const passwordFormSchema = z.object({
-  currentPassword: z.string().min(6, { message: 'Senha atual deve ter pelo menos 6 caracteres' }),
-  newPassword: z.string().min(6, { message: 'Nova senha deve ter pelo menos 6 caracteres' }),
-  confirmPassword: z.string().min(6, { message: 'Confirmação deve ter pelo menos 6 caracteres' }),
+  currentPassword: z.string().min(6, { message: 'Current password must have at least 6 characters' }),
+  newPassword: z.string().min(6, { message: 'New password must have at least 6 characters' }),
+  confirmPassword: z.string().min(6, { message: 'Confirmation must have at least 6 characters' }),
 }).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "As senhas não coincidem",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
@@ -97,13 +97,13 @@ const ProfilePage: React.FC = () => {
     return null;
   }
 
-  // Função para lidar com o upload de avatar
+  // Handle avatar file change
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
       
-      // Criar uma URL para previsualização
+      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -112,56 +112,76 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Função para salvar as alterações do perfil
+  // Handle profile form submission
   const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
     try {
       setLoading(true);
       
       let photoURL = currentUser.photoURL;
       
-      // Se tiver um novo avatar, faz upload para o Supabase Storage
+      // Upload new avatar if selected
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${currentUser.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${currentUser.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
         
+        // First, check if there are existing files for this user and delete them
+        try {
+          const { data: existingFiles } = await supabase.storage
+            .from('avatars')
+            .list(currentUser.id);
+            
+          if (existingFiles && existingFiles.length > 0) {
+            const filesToDelete = existingFiles.map(file => `${currentUser.id}/${file.name}`);
+            await supabase.storage
+              .from('avatars')
+              .remove(filesToDelete);
+          }
+        } catch (error) {
+          console.log("No existing files to delete or error:", error);
+        }
+        
+        // Upload the new file
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(fileName, avatarFile);
+          .upload(filePath, avatarFile, {
+            upsert: true,
+            contentType: avatarFile.type
+          });
         
         if (uploadError) throw uploadError;
         
-        // Obter URL pública
+        // Get public URL
         const { data: urlData } = supabase.storage
           .from('avatars')
-          .getPublicUrl(fileName);
+          .getPublicUrl(filePath);
         
         photoURL = urlData.publicUrl;
       }
       
-      // Atualizar perfil
+      // Update profile
       await updateProfile({
         name: values.name,
         photoURL: photoURL,
       });
       
       toast({
-        title: 'Perfil atualizado',
-        description: 'Suas informações foram atualizadas com sucesso.',
+        title: 'Profile updated',
+        description: 'Your information has been updated successfully.',
       });
       
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
       toast({
         variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível atualizar o perfil. Tente novamente.',
+        title: 'Error',
+        description: error.message || 'Could not update profile. Please try again.',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Função para atualizar a senha
+  // Update password
   const onPasswordSubmit = async (values: z.infer<typeof passwordFormSchema>) => {
     try {
       setPasswordLoading(true);
@@ -173,19 +193,19 @@ const ProfilePage: React.FC = () => {
       if (error) throw error;
       
       toast({
-        title: 'Senha atualizada',
-        description: 'Sua senha foi atualizada com sucesso.',
+        title: 'Password updated',
+        description: 'Your password has been updated successfully.',
       });
       
       passwordForm.reset();
       setPasswordDialogOpen(false);
       
     } catch (error: any) {
-      console.error('Erro ao atualizar senha:', error);
+      console.error('Error updating password:', error);
       toast({
         variant: 'destructive',
-        title: 'Erro',
-        description: error.message || 'Não foi possível atualizar sua senha. Tente novamente.',
+        title: 'Error',
+        description: error.message || 'Could not update your password. Please try again.',
       });
     } finally {
       setPasswordLoading(false);
@@ -195,8 +215,8 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="container py-8 px-4 md:px-6">
       <PageTitle 
-        title="Seu Perfil" 
-        description="Gerencie suas informações pessoais e configure sua conta"
+        title="Your Profile" 
+        description="Manage your personal information and configure your account"
         icon={<User className="h-6 w-6" />}
       />
       
@@ -204,9 +224,9 @@ const ProfilePage: React.FC = () => {
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle>Foto de Perfil</CardTitle>
+              <CardTitle>Profile Picture</CardTitle>
               <CardDescription>
-                Sua foto será exibida em seu perfil e nas interações com o aplicativo
+                Your photo will be displayed on your profile and in interactions with the app
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center p-6">
@@ -225,7 +245,7 @@ const ProfilePage: React.FC = () => {
                   className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
                 >
                   <Camera className="h-5 w-5" />
-                  <span className="sr-only">Alterar foto</span>
+                  <span className="sr-only">Change photo</span>
                 </label>
                 <input 
                   id="avatar-upload" 
@@ -236,7 +256,7 @@ const ProfilePage: React.FC = () => {
                 />
               </div>
               <p className="text-sm text-muted-foreground text-center mt-2">
-                Clique no ícone de câmera para alterar sua foto
+                Click on the camera icon to change your photo
               </p>
             </CardContent>
           </Card>
@@ -245,9 +265,9 @@ const ProfilePage: React.FC = () => {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
+              <CardTitle>Personal Information</CardTitle>
               <CardDescription>
-                Atualize suas informações pessoais
+                Update your personal information
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -258,9 +278,9 @@ const ProfilePage: React.FC = () => {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome</FormLabel>
+                        <FormLabel>Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Seu nome" {...field} />
+                          <Input placeholder="Your name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -271,13 +291,13 @@ const ProfilePage: React.FC = () => {
                     <FormLabel>Email</FormLabel>
                     <Input value={currentUser.email} disabled />
                     <p className="text-sm text-muted-foreground mt-1">
-                      O email não pode ser alterado
+                      Email cannot be changed
                     </p>
                   </FormItem>
                   
                   <div className="pt-4">
                     <Button type="submit" disabled={loading}>
-                      {loading ? 'Salvando...' : 'Salvar alterações'}
+                      {loading ? 'Saving...' : 'Save changes'}
                     </Button>
                   </div>
                 </form>
@@ -290,14 +310,14 @@ const ProfilePage: React.FC = () => {
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full">
                   <KeyRound className="mr-2 h-4 w-4" />
-                  Alterar Senha
+                  Change Password
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Alterar sua senha</DialogTitle>
+                  <DialogTitle>Change your password</DialogTitle>
                   <DialogDescription>
-                    Crie uma nova senha forte para sua conta
+                    Create a strong new password for your account
                   </DialogDescription>
                 </DialogHeader>
                 
@@ -308,9 +328,9 @@ const ProfilePage: React.FC = () => {
                       name="newPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nova senha</FormLabel>
+                          <FormLabel>New password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="Digite sua nova senha" {...field} />
+                            <Input type="password" placeholder="Enter your new password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -322,9 +342,9 @@ const ProfilePage: React.FC = () => {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirmar nova senha</FormLabel>
+                          <FormLabel>Confirm new password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="Confirme sua nova senha" {...field} />
+                            <Input type="password" placeholder="Confirm your new password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -333,10 +353,10 @@ const ProfilePage: React.FC = () => {
                     
                     <DialogFooter>
                       <Button variant="outline" type="button" onClick={() => setPasswordDialogOpen(false)}>
-                        Cancelar
+                        Cancel
                       </Button>
                       <Button type="submit" disabled={passwordLoading}>
-                        {passwordLoading ? 'Alterando...' : 'Alterar Senha'}
+                        {passwordLoading ? 'Changing...' : 'Change Password'}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -347,20 +367,20 @@ const ProfilePage: React.FC = () => {
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full">
-                  Excluir Conta
+                  Delete Account
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta e removerá seus dados dos nossos servidores.
+                    This action cannot be undone. This will permanently delete your account and remove your data from our servers.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction className="bg-destructive text-destructive-foreground">
-                    Excluir Conta
+                    Delete Account
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
