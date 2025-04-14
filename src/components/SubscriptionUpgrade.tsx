@@ -43,6 +43,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
         throw new Error("Usuário não autenticado");
       }
       
+      // Make sure to pass the coupon code in the request body
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${token}`,
