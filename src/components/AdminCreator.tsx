@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 const AdminCreator = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
+  const { refreshSubscription } = useAuth();
+  const { toast } = useToast();
 
   const upgradeUserToPro = async () => {
     setLoading(true);
@@ -33,9 +37,17 @@ const AdminCreator = () => {
       
       console.log('Upgrade response:', subscriberData);
       
+      // Now manually refresh the subscription status in the global auth context
+      await refreshSubscription();
+      
       setResult({ 
         success: true, 
         message: 'Usuário simpleit.solucoes@gmail.com atualizado para o plano Pro com sucesso!'
+      });
+      
+      toast({
+        title: "Upgrade concluído",
+        description: "O usuário foi atualizado para o plano Pro com sucesso e agora tem acesso ilimitado.",
       });
       
     } catch (err: any) {
