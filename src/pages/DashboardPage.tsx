@@ -10,142 +10,100 @@ import { bibleVerses } from '@/data/bibleData';
 import { Calendar, BookOpen, Edit3, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getLevelTitle } from '@/utils/achievementUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { UserReflection } from '@/data/bibleData';
 
 const DashboardPage: React.FC = () => {
   const { currentUser, updateProfile } = useAuth();
-  const [userReflections, setUserReflections] = useState<any[]>([]);
+  const [userReflections, setUserReflections] = useState<UserReflection[]>([]);
   const [readVerses, setReadVerses] = useState<string[]>([]);
   const [progressPercentage, setProgressPercentage] = useState(0);
-  const [lastReflection, setLastReflection] = useState<any>(null);
+  const [lastReflection, setLastReflection] = useState<UserReflection | null>(null);
   const [lastReflectionVerse, setLastReflectionVerse] = useState<any>(null);
   const [nextVerseToStudy, setNextVerseToStudy] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (currentUser) {
-      // Carrega os dados do localStorage
       loadUserData();
-      
-      // Atualiza a sequência de dias (streak)
-      updateUserStreak();
     }
   }, [currentUser]);
 
-  const loadUserData = () => {
+  const loadUserData = async () => {
     if (!currentUser) return;
     
-    // Carrega versículos lidos
-    const savedReadVerses = localStorage.getItem(`palavraViva_readVerses_${currentUser.id}`);
-    let loadedReadVerses: string[] = [];
+    setLoading(true);
     
-    if (savedReadVerses) {
-      try {
-        loadedReadVerses = JSON.parse(savedReadVerses);
-        setReadVerses(loadedReadVerses);
+    try {
+      // Load read verses
+      const { data: readVersesData, error: readVersesError } = await supabase
+        .from('read_verses')
+        .select('verse_id')
+        .eq('user_id', currentUser.id);
         
-        // Atualiza no perfil do usuário caso necessário
-        if (currentUser.chaptersRead !== loadedReadVerses.length) {
-          updateProfile({
-            chaptersRead: loadedReadVerses.length
-          });
-        }
-      } catch (error) {
-        console.error("Erro ao carregar versículos lidos:", error);
-      }
-    }
-    
-    // Carrega reflexões
-    const savedReflections = localStorage.getItem('palavraViva_reflections');
-    let loadedReflections: any[] = [];
-    
-    if (savedReflections) {
-      try {
-        const parsedReflections = JSON.parse(savedReflections);
-        loadedReflections = parsedReflections.map((item: any) => ({
-          ...item,
-          createdAt: new Date(item.createdAt)
-        }));
+      if (readVersesError) throw readVersesError;
+      
+      const verseIds = readVersesData.map(item => item.verse_id);
+      setReadVerses(verseIds);
+      
+      // Calculate progress
+      const totalVerses = bibleVerses.length;
+      const completedVerses = verseIds.length;
+      const calculatedProgress = Math.round((completedVerses / totalVerses) * 100);
+      setProgressPercentage(calculatedProgress);
+      
+      // Load reflections
+      const { data: reflectionsData, error: reflectionsError } = await supabase
+        .from('reflections')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
         
-        // Filtra apenas reflexões do usuário atual
-        const userReflectionsFiltered = loadedReflections.filter(
-          (ref) => ref.userId === currentUser.id
+      if (reflectionsError) throw reflectionsError;
+      
+      const formattedReflections = reflectionsData.map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        verseId: item.verse_id,
+        text: item.text,
+        createdAt: new Date(item.created_at)
+      }));
+      
+      setUserReflections(formattedReflections);
+      
+      // Get latest reflection
+      if (formattedReflections.length > 0) {
+        const latestReflection = formattedReflections[0];
+        setLastReflection(latestReflection);
+        
+        // Find verse data for latest reflection
+        const verse = bibleVerses.find(
+          (verse) => verse.id === latestReflection.verseId
         );
-        
-        setUserReflections(userReflectionsFiltered);
-        
-        // Atualiza no perfil do usuário caso necessário
-        if (currentUser.totalReflections !== userReflectionsFiltered.length) {
-          updateProfile({
-            totalReflections: userReflectionsFiltered.length
-          });
-        }
-        
-        // Encontra a última reflexão
-        if (userReflectionsFiltered.length > 0) {
-          const sortedReflections = userReflectionsFiltered.sort(
-            (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-          );
-          
-          const latestReflection = sortedReflections[0];
-          setLastReflection(latestReflection);
-          
-          // Encontra o versículo da última reflexão
-          const verse = bibleVerses.find(
-            (verse) => verse.id === latestReflection.verseId
-          );
-          setLastReflectionVerse(verse);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar reflexões:", error);
+        setLastReflectionVerse(verse);
       }
-    }
-    
-    // Calcula progresso
-    const totalVerses = bibleVerses.length;
-    const completedVerses = loadedReadVerses.length;
-    const calculatedProgress = Math.round((completedVerses / totalVerses) * 100);
-    setProgressPercentage(calculatedProgress);
-    
-    // Encontra próximo versículo para estudar
-    const nextVerse = bibleVerses.find(
-      (verse) => !loadedReadVerses.includes(verse.id)
-    );
-    setNextVerseToStudy(nextVerse);
-  };
-
-  const updateUserStreak = () => {
-    if (!currentUser) return;
-    
-    // Verifica a última data de acesso
-    const lastAccessKey = `palavraViva_lastAccess_${currentUser.id}`;
-    const today = new Date().toDateString();
-    const lastAccess = localStorage.getItem(lastAccessKey);
-    
-    // Atualiza a sequência de dias
-    if (lastAccess && lastAccess !== today) {
-      const lastAccessDate = new Date(lastAccess);
-      const todayDate = new Date(today);
       
-      // Calcula a diferença em dias
-      const diffTime = Math.abs(todayDate.getTime() - lastAccessDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      // Find next verse to study
+      const nextVerse = bibleVerses.find(
+        (verse) => !verseIds.includes(verse.id)
+      );
+      setNextVerseToStudy(nextVerse);
       
-      // Se a diferença for de 1 dia, incrementa a sequência
-      if (diffDays === 1) {
-        const newStreak = currentUser.consecutiveDays + 1;
-        updateProfile({ consecutiveDays: newStreak });
-      } 
-      // Se for mais de 1 dia, reinicia a sequência
-      else if (diffDays > 1) {
-        updateProfile({ consecutiveDays: 1 });
+      // Update user stats if needed
+      if (currentUser.chaptersRead !== verseIds.length || 
+          currentUser.totalReflections !== formattedReflections.length) {
+        
+        await updateProfile({
+          chaptersRead: verseIds.length,
+          totalReflections: formattedReflections.length
+        });
       }
-    } 
-    // Se não houver último acesso, inicia a sequência
-    else if (!lastAccess) {
-      updateProfile({ consecutiveDays: 1 });
+      
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    } finally {
+      setLoading(false);
     }
-    
-    // Atualiza a data do último acesso para hoje
-    localStorage.setItem(lastAccessKey, today);
   };
 
   if (!currentUser) return null;
@@ -162,143 +120,151 @@ const DashboardPage: React.FC = () => {
         <UserAvatar user={currentUser} showLevel={true} size="lg" />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="h-5 w-5 text-primary" />
-              <h3 className="font-medium">Sequência Atual</h3>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center">
-                <span className="text-3xl font-bold">{currentUser.consecutiveDays}</span>
-                <span className="text-sm text-muted-foreground">dias</span>
-              </div>
-              <p className="text-sm text-muted-foreground">Continue estudando para aumentar sua sequência!</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <BookOpen className="h-5 w-5 text-primary" />
-              <h3 className="font-medium">Capítulos Lidos</h3>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center">
-                <span className="text-3xl font-bold">{currentUser.chaptersRead}</span>
-                <span className="text-sm text-muted-foreground">de {bibleVerses.length}</span>
-              </div>
-              <Progress value={progressPercentage} className="h-2" />
-              <p className="text-sm text-muted-foreground mt-1">{progressPercentage}% da jornada completada</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Award className="h-5 w-5 text-primary" />
-              <h3 className="font-medium">Seu Nível</h3>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center">
-                <span className="text-3xl font-bold">{currentUser.level}</span>
-                <span className="text-sm text-muted-foreground">{getLevelTitle(currentUser.level)}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {currentUser.totalReflections} reflexões escritas até agora
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
-        {lastReflection && lastReflectionVerse && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Edit3 className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">Última Reflexão</h3>
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">Carregando seu progresso...</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <h3 className="font-medium">Sequência Atual</h3>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {lastReflection.createdAt.toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-              <div className="mb-2">
-                <h4 className="text-sm font-medium">
-                  {lastReflectionVerse.book} {lastReflectionVerse.chapter}:{lastReflectionVerse.verse}
-                </h4>
-                <p className="text-xs italic text-muted-foreground mb-2">
-                  "{lastReflectionVerse.text.length > 100 
-                    ? lastReflectionVerse.text.substring(0, 100) + '...' 
-                    : lastReflectionVerse.text}"
-                </p>
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                {lastReflection.text.length > 150 
-                  ? lastReflection.text.substring(0, 150) + '...' 
-                  : lastReflection.text}
-              </p>
-              <div className="mt-4">
-                <Link to="/reflections">
-                  <Button variant="outline" size="sm">Ver Todas as Reflexões</Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-3xl font-bold">{currentUser.consecutiveDays}</span>
+                    <span className="text-sm text-muted-foreground">dias</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Continue estudando para aumentar sua sequência!</p>
+                </div>
+              </CardContent>
+            </Card>
 
-        {nextVerseToStudy && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="h-5 w-5 text-primary" />
-                <h3 className="font-medium">Continue Sua Jornada</h3>
-              </div>
-              <div className="mb-4">
-                <h4 className="text-sm font-medium">
-                  Próximo estudo: {nextVerseToStudy.book} {nextVerseToStudy.chapter}:{nextVerseToStudy.verse}
-                </h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Continue sua jornada de estudo bíblico.
-                </p>
-              </div>
-              <Link to="/study-route">
-                <Button className="w-full">Continuar Estudando</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  <h3 className="font-medium">Capítulos Lidos</h3>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-3xl font-bold">{currentUser.chaptersRead}</span>
+                    <span className="text-sm text-muted-foreground">de {bibleVerses.length}</span>
+                  </div>
+                  <Progress value={progressPercentage} className="h-2" />
+                  <p className="text-sm text-muted-foreground mt-1">{progressPercentage}% da jornada completada</p>
+                </div>
+              </CardContent>
+            </Card>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Link to="/study-route">
-          <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2">
-            <BookOpen className="h-6 w-6" />
-            <span>Rota de Estudo</span>
-          </Button>
-        </Link>
-        <Link to="/reflections">
-          <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2">
-            <Edit3 className="h-6 w-6" />
-            <span>Minhas Reflexões</span>
-          </Button>
-        </Link>
-        <Link to="/achievements">
-          <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2">
-            <Award className="h-6 w-6" />
-            <span>Conquistas</span>
-          </Button>
-        </Link>
-        <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2" disabled>
-          <Calendar className="h-6 w-6" />
-          <span>Versículo Diário</span>
-        </Button>
-      </div>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="h-5 w-5 text-primary" />
+                  <h3 className="font-medium">Seu Nível</h3>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-3xl font-bold">{currentUser.level}</span>
+                    <span className="text-sm text-muted-foreground">{getLevelTitle(currentUser.level)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {currentUser.totalReflections} reflexões escritas até agora
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 mb-8">
+            {lastReflection && lastReflectionVerse && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Edit3 className="h-5 w-5 text-primary" />
+                      <h3 className="font-medium">Última Reflexão</h3>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {lastReflection.createdAt.toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <div className="mb-2">
+                    <h4 className="text-sm font-medium">
+                      {lastReflectionVerse.book} {lastReflectionVerse.chapter}:{lastReflectionVerse.verse}
+                    </h4>
+                    <p className="text-xs italic text-muted-foreground mb-2">
+                      "{lastReflectionVerse.text.length > 100 
+                        ? lastReflectionVerse.text.substring(0, 100) + '...' 
+                        : lastReflectionVerse.text}"
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    {lastReflection.text.length > 150 
+                      ? lastReflection.text.substring(0, 150) + '...' 
+                      : lastReflection.text}
+                  </p>
+                  <div className="mt-4">
+                    <Link to="/reflections">
+                      <Button variant="outline" size="sm">Ver Todas as Reflexões</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {nextVerseToStudy && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    <h3 className="font-medium">Continue Sua Jornada</h3>
+                  </div>
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium">
+                      Próximo estudo: {nextVerseToStudy.book} {nextVerseToStudy.chapter}:{nextVerseToStudy.verse}
+                    </h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Continue sua jornada de estudo bíblico.
+                    </p>
+                  </div>
+                  <Link to="/study-route">
+                    <Button className="w-full">Continuar Estudando</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Link to="/study-route">
+              <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2">
+                <BookOpen className="h-6 w-6" />
+                <span>Rota de Estudo</span>
+              </Button>
+            </Link>
+            <Link to="/reflections">
+              <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2">
+                <Edit3 className="h-6 w-6" />
+                <span>Minhas Reflexões</span>
+              </Button>
+            </Link>
+            <Link to="/achievements">
+              <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2">
+                <Award className="h-6 w-6" />
+                <span>Conquistas</span>
+              </Button>
+            </Link>
+            <Button variant="outline" className="w-full h-auto py-6 flex flex-col gap-2" disabled>
+              <Calendar className="h-6 w-6" />
+              <span>Versículo Diário</span>
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -25,16 +25,15 @@ const LoginPage: React.FC = () => {
     try {
       await signInWithGoogle();
       toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao Palavra Viva.",
+        title: "Redirecionando para o Google",
+        description: "Você será redirecionado para fazer login com o Google.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: "Não foi possível fazer login. Tente novamente mais tarde.",
+        description: error.message || "Não foi possível fazer login. Tente novamente mais tarde.",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -63,7 +62,6 @@ const LoginPage: React.FC = () => {
         title: "Erro ao fazer login",
         description: error.message || "Não foi possível fazer login. Verifique suas credenciais.",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -98,12 +96,22 @@ const LoginPage: React.FC = () => {
         description: "Bem-vindo ao Palavra Viva. Sua jornada está apenas começando.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar",
-        description: error.message || "Não foi possível criar sua conta. Tente novamente mais tarde.",
-      });
-    } finally {
+      const errorMessage = error.message || "Não foi possível criar sua conta. Tente novamente mais tarde.";
+      
+      // Check for specific error types
+      if (errorMessage.includes("User already registered")) {
+        toast({
+          variant: "destructive",
+          title: "Usuário já cadastrado",
+          description: "Este e-mail já está em uso. Tente fazer login ou use outro e-mail.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao cadastrar",
+          description: errorMessage,
+        });
+      }
       setIsSubmitting(false);
     }
   };

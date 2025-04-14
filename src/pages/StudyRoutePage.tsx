@@ -1,147 +1,223 @@
-
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import BibleVerseCard from '@/components/BibleVerseCard';
 import { bibleVerses } from '@/data/bibleData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { UserReflection } from '@/data/bibleData';
 
 const StudyRoutePage: React.FC = () => {
   const { currentUser, updateProfile } = useAuth();
   const [readVerses, setReadVerses] = useState<string[]>([]);
-  const [reflections, setReflections] = useState<any[]>([]);
+  const [reflections, setReflections] = useState<UserReflection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Carrega as reflexões e versículos lidos do localStorage ao iniciar
   useEffect(() => {
     if (currentUser) {
-      // Carrega versículos lidos
-      const savedReadVerses = localStorage.getItem(`palavraViva_readVerses_${currentUser.id}`);
-      
-      if (savedReadVerses) {
-        try {
-          const parsedReadVerses = JSON.parse(savedReadVerses);
-          setReadVerses(parsedReadVerses);
-          
-          // Atualiza as estatísticas do usuário se necessário
-          if (currentUser.chaptersRead !== parsedReadVerses.length) {
-            updateProfile({
-              chaptersRead: parsedReadVerses.length
-            });
-          }
-        } catch (error) {
-          console.error("Erro ao carregar versículos lidos:", error);
-        }
-      }
-      
-      // Carrega reflexões
-      const savedReflections = localStorage.getItem('palavraViva_reflections');
-      
-      if (savedReflections) {
-        try {
-          const parsedReflections = JSON.parse(savedReflections);
-          const formattedReflections = parsedReflections.map((item: any) => ({
-            ...item,
-            createdAt: new Date(item.createdAt)
-          }));
-          
-          setReflections(formattedReflections);
-          
-          // Conta quantas reflexões o usuário atual tem
-          const userReflectionsCount = formattedReflections.filter(
-            (ref: any) => ref.userId === currentUser.id
-          ).length;
-          
-          // Atualiza as estatísticas do usuário se necessário
-          if (currentUser.totalReflections !== userReflectionsCount) {
-            updateProfile({
-              totalReflections: userReflectionsCount
-            });
-          }
-        } catch (error) {
-          console.error("Erro ao carregar reflexões:", error);
-        }
-      }
-      
-      // Atualiza a data do último acesso
-      const today = new Date().toDateString();
-      localStorage.setItem(`palavraViva_lastAccess_${currentUser.id}`, today);
+      loadUserData();
+      updateUserStreak();
     }
-  }, [currentUser, updateProfile]);
+  }, [currentUser]);
 
-  if (!currentUser) return null;
-
-  const handleMarkAsRead = (verseId: string) => {
-    if (readVerses.includes(verseId)) return;
-    
-    const updatedReadVerses = [...readVerses, verseId];
-    setReadVerses(updatedReadVerses);
-    
-    // Persiste os versículos lidos no localStorage
-    localStorage.setItem(`palavraViva_readVerses_${currentUser.id}`, JSON.stringify(updatedReadVerses));
-    
-    // Atualiza as estatísticas do usuário
-    updateUserStats(updatedReadVerses);
-    
-    toast({
-      title: "Versículo marcado como lido!",
-      description: "Seu progresso foi atualizado.",
-    });
-  };
-
-  const updateUserStats = (verses: string[]) => {
+  const loadUserData = async () => {
     if (!currentUser) return;
     
-    // Atualiza as estatísticas do usuário (chaptersRead)
-    updateProfile({
-      chaptersRead: verses.length
-    }).catch(error => {
-      console.error("Erro ao atualizar estatísticas:", error);
-    });
-  };
-
-  const handleSaveReflection = (verseId: string, text: string) => {
-    // Check if a reflection already exists for this verse
-    const existingReflectionIndex = reflections.findIndex(
-      (ref) => ref.verseId === verseId && ref.userId === currentUser.id
-    );
-
-    const newReflection = {
-      id: existingReflectionIndex >= 0 ? reflections[existingReflectionIndex].id : Date.now().toString(),
-      verseId,
-      userId: currentUser.id,
-      text,
-      createdAt: new Date()
-    };
-
-    let updatedReflections;
-    if (existingReflectionIndex >= 0) {
-      // Update existing reflection
-      updatedReflections = [...reflections];
-      updatedReflections[existingReflectionIndex] = newReflection;
-    } else {
-      // Add new reflection
-      updatedReflections = [...reflections, newReflection];
-    }
+    setLoading(true);
     
-    setReflections(updatedReflections);
-    
-    // Persiste as reflexões no localStorage
-    saveReflectionsToLocalStorage(updatedReflections);
-    
-    // Atualiza as estatísticas do usuário
-    updateUserReflectionStats(updatedReflections);
-
-    toast({
-      title: "Reflexão salva com sucesso!",
-      description: "Sua reflexão foi armazenada.",
-    });
-  };
-
-  const saveReflectionsToLocalStorage = (updatedReflections: typeof reflections) => {
     try {
-      localStorage.setItem('palavraViva_reflections', JSON.stringify(updatedReflections));
+      const { data: readVersesData, error: readVersesError } = await supabase
+        .from('read_verses')
+        .select('verse_id')
+        .eq('user_id', currentUser.id);
+        
+      if (readVersesError) {
+        throw readVersesError;
+      }
+      
+      const verseIds = readVersesData.map(item => item.verse_id);
+      setReadVerses(verseIds);
+      
+      const { data: reflectionsData, error: reflectionsError } = await supabase
+        .from('reflections')
+        .select('*')
+        .eq('user_id', currentUser.id);
+        
+      if (reflectionsError) {
+        throw reflectionsError;
+      }
+      
+      const formattedReflections = reflectionsData.map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        verseId: item.verse_id,
+        text: item.text,
+        createdAt: new Date(item.created_at)
+      }));
+      
+      setReflections(formattedReflections);
+      
+      if (currentUser.chaptersRead !== verseIds.length || 
+          currentUser.totalReflections !== formattedReflections.length) {
+        await updateProfile({
+          chaptersRead: verseIds.length,
+          totalReflections: formattedReflections.length
+        });
+      }
+      
     } catch (error) {
-      console.error("Erro ao salvar reflexões:", error);
+      console.error("Error loading user data:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar seus dados. Tente novamente mais tarde.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUserStreak = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('last_access, consecutive_days')
+        .eq('id', currentUser.id)
+        .single();
+        
+      if (profileError) throw profileError;
+      
+      const lastAccess = new Date(profileData.last_access);
+      const today = new Date();
+      
+      lastAccess.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      
+      let newStreak = profileData.consecutive_days;
+      
+      if (lastAccess.getTime() === yesterday.getTime()) {
+        newStreak += 1;
+        await updateProfile({ consecutiveDays: newStreak });
+      } 
+      else if (lastAccess.getTime() < yesterday.getTime()) {
+        newStreak = 1;
+        await updateProfile({ consecutiveDays: newStreak });
+      }
+      
+      await supabase
+        .from('profiles')
+        .update({ last_access: today.toISOString() })
+        .eq('id', currentUser.id);
+      
+    } catch (error) {
+      console.error("Error updating user streak:", error);
+    }
+  };
+
+  const handleMarkAsRead = async (verseId: string) => {
+    if (!currentUser) return;
+    if (readVerses.includes(verseId)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('read_verses')
+        .insert({
+          user_id: currentUser.id,
+          verse_id: verseId
+        });
+        
+      if (error) throw error;
+      
+      const updatedReadVerses = [...readVerses, verseId];
+      setReadVerses(updatedReadVerses);
+      
+      await updateProfile({
+        chaptersRead: updatedReadVerses.length
+      });
+      
+      toast({
+        title: "Versículo marcado como lido!",
+        description: "Seu progresso foi atualizado.",
+      });
+      
+    } catch (error) {
+      console.error("Error marking verse as read:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao marcar como lido",
+        description: "Não foi possível atualizar seu progresso. Tente novamente mais tarde.",
+      });
+    }
+  };
+
+  const handleSaveReflection = async (verseId: string, text: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const existingReflection = reflections.find(
+        (ref) => ref.verseId === verseId && ref.userId === currentUser.id
+      );
+      
+      if (existingReflection) {
+        const { error } = await supabase
+          .from('reflections')
+          .update({
+            text,
+            created_at: new Date().toISOString()
+          })
+          .eq('id', existingReflection.id);
+          
+        if (error) throw error;
+        
+        const updatedReflections = reflections.map(ref => 
+          ref.id === existingReflection.id 
+            ? { ...ref, text, createdAt: new Date() } 
+            : ref
+        );
+        
+        setReflections(updatedReflections);
+        
+      } else {
+        const { data, error } = await supabase
+          .from('reflections')
+          .insert({
+            user_id: currentUser.id,
+            verse_id: verseId,
+            text
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        
+        const newReflection = {
+          id: data.id,
+          userId: data.user_id,
+          verseId: data.verse_id,
+          text: data.text,
+          createdAt: new Date(data.created_at)
+        };
+        
+        const updatedReflections = [...reflections, newReflection];
+        setReflections(updatedReflections);
+        
+        await updateProfile({
+          totalReflections: updatedReflections.length
+        });
+      }
+      
+      toast({
+        title: "Reflexão salva com sucesso!",
+        description: "Sua reflexão foi armazenada.",
+      });
+      
+    } catch (error) {
+      console.error("Error saving reflection:", error);
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
@@ -150,21 +226,7 @@ const StudyRoutePage: React.FC = () => {
     }
   };
 
-  const updateUserReflectionStats = (updatedReflections: typeof reflections) => {
-    if (!currentUser) return;
-    
-    // Conta quantas reflexões o usuário atual tem
-    const userReflectionsCount = updatedReflections.filter(
-      ref => ref.userId === currentUser.id
-    ).length;
-    
-    // Atualiza as estatísticas do usuário
-    updateProfile({
-      totalReflections: userReflectionsCount
-    }).catch(error => {
-      console.error("Erro ao atualizar estatísticas:", error);
-    });
-  };
+  if (!currentUser) return null;
 
   return (
     <div className="container max-w-3xl py-6 px-4 md:px-6">
@@ -173,25 +235,31 @@ const StudyRoutePage: React.FC = () => {
         subtitle="Siga seu caminho personalizado de aprendizado bíblico."
       />
 
-      <div className="my-6">
-        {bibleVerses.map((verse) => {
-          const isRead = readVerses.includes(verse.id);
-          const userReflection = reflections.find(
-            (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
-          );
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">Carregando seu progresso...</p>
+        </div>
+      ) : (
+        <div className="my-6">
+          {bibleVerses.map((verse) => {
+            const isRead = readVerses.includes(verse.id);
+            const userReflection = reflections.find(
+              (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
+            );
 
-          return (
-            <BibleVerseCard
-              key={verse.id}
-              verse={verse}
-              isRead={isRead}
-              userReflection={userReflection}
-              onMarkAsRead={handleMarkAsRead}
-              onSaveReflection={handleSaveReflection}
-            />
-          );
-        })}
-      </div>
+            return (
+              <BibleVerseCard
+                key={verse.id}
+                verse={verse}
+                isRead={isRead}
+                userReflection={userReflection}
+                onMarkAsRead={handleMarkAsRead}
+                onSaveReflection={handleSaveReflection}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

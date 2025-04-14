@@ -9,7 +9,106 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          chapters_read: number
+          consecutive_days: number
+          created_at: string
+          email: string
+          id: string
+          last_access: string
+          level: number
+          name: string
+          photo_url: string | null
+          total_reflections: number
+        }
+        Insert: {
+          chapters_read?: number
+          consecutive_days?: number
+          created_at?: string
+          email: string
+          id: string
+          last_access?: string
+          level?: number
+          name: string
+          photo_url?: string | null
+          total_reflections?: number
+        }
+        Update: {
+          chapters_read?: number
+          consecutive_days?: number
+          created_at?: string
+          email?: string
+          id?: string
+          last_access?: string
+          level?: number
+          name?: string
+          photo_url?: string | null
+          total_reflections?: number
+        }
+        Relationships: []
+      }
+      read_verses: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          verse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          verse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          verse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "read_verses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reflections: {
+        Row: {
+          created_at: string
+          id: string
+          text: string
+          user_id: string
+          verse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          text: string
+          user_id: string
+          verse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          text?: string
+          user_id?: string
+          verse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reflections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

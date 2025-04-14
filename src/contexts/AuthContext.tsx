@@ -1,5 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 // Define the User type
 export type User = {
@@ -41,34 +43,105 @@ const AuthContext = createContext<AuthContextType>({
 // Custom hook to use the auth context
 export const useAuth = () => useContext(AuthContext);
 
+// Helper function to convert Supabase user data to our User type
+const formatUser = (user: SupabaseUser | null, profileData: any): User | null => {
+  if (!user || !profileData) return null;
+  
+  return {
+    id: user.id,
+    name: profileData.name,
+    email: profileData.email,
+    photoURL: profileData.photo_url,
+    level: profileData.level,
+    totalReflections: profileData.total_reflections,
+    chaptersRead: profileData.chapters_read,
+    consecutiveDays: profileData.consecutive_days,
+    createdAt: new Date(profileData.created_at),
+  };
+};
+
 // Auth provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
+  // Check for existing session on mount and setup auth listener
   useEffect(() => {
-    // Check if user is already authenticated from localStorage
-    const savedUser = localStorage.getItem('palavraViva_user');
-    
-    if (savedUser) {
-      try {
-        // Parse the user data and validate it's a User object
-        const userData = JSON.parse(savedUser);
-        if (userData && userData.id && userData.email) {
-          // Convert createdAt string back to Date object
-          if (typeof userData.createdAt === 'string') {
-            userData.createdAt = new Date(userData.createdAt);
-          }
-          setCurrentUser(userData);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session?.user) {
+          // Defer profile fetch with setTimeout
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+                
+              if (error) {
+                console.error("Error fetching user profile:", error);
+                return;
+              }
+              
+              setCurrentUser(formatUser(session.user, data));
+              
+              // Update last_access time
+              await supabase
+                .from('profiles')
+                .update({ last_access: new Date().toISOString() })
+                .eq('id', session.user.id);
+                
+            } catch (error) {
+              console.error("Error in auth state change:", error);
+            }
+          }, 0);
+        } else {
+          setCurrentUser(null);
         }
-      } catch (error) {
-        console.error("Erro ao parsear dados do usuário:", error);
-        localStorage.removeItem('palavraViva_user');
       }
-    }
-    
-    setLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      
+      if (session?.user) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching user profile:", error);
+            return;
+          }
+          
+          setCurrentUser(formatUser(session.user, data));
+          
+          // Update last_access time
+          await supabase
+            .from('profiles')
+            .update({ last_access: new Date().toISOString() })
+            .eq('id', session.user.id);
+            
+        } catch (error) {
+          console.error("Error fetching profile on init:", error);
+        }
+      }
+      
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Sign up with email/password
@@ -76,42 +149,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
-      // Check if email already exists in local storage
-      const users = JSON.parse(localStorage.getItem('palavraViva_users') || '[]');
-      const existingUser = users.find((user: any) => user.email === email);
-      
-      if (existingUser) {
-        throw new Error("Este e-mail já está em uso.");
-      }
-      
-      // Create new user
-      const newUser: User = {
-        id: Date.now().toString(),
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        photoURL: `https://i.pravatar.cc/150?u=${email}`, // Use email to generate a random avatar
-        level: 1,
-        totalReflections: 0,
-        chaptersRead: 0,
-        consecutiveDays: 0,
-        createdAt: new Date()
-      };
+        password,
+        options: {
+          data: {
+            name,
+          }
+        }
+      });
       
-      // Save password separately in a "secure" object
-      const credentials = JSON.parse(localStorage.getItem('palavraViva_credentials') || '{}');
-      credentials[email] = { password };
-      localStorage.setItem('palavraViva_credentials', JSON.stringify(credentials));
-      
-      // Save user to users list
-      users.push(newUser);
-      localStorage.setItem('palavraViva_users', JSON.stringify(users));
-      
-      // Log user in
-      setCurrentUser(newUser);
-      localStorage.setItem('palavraViva_user', JSON.stringify(newUser));
+      if (error) throw error;
       
     } catch (error) {
-      console.error("Erro ao criar conta:", error);
+      console.error("Error signing up:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -123,70 +174,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
-      // Get credentials
-      const credentials = JSON.parse(localStorage.getItem('palavraViva_credentials') || '{}');
-      const userCredential = credentials[email];
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (!userCredential || userCredential.password !== password) {
-        throw new Error("E-mail ou senha incorretos.");
-      }
-      
-      // Get user data
-      const users = JSON.parse(localStorage.getItem('palavraViva_users') || '[]');
-      const user = users.find((u: any) => u.email === email);
-      
-      if (!user) {
-        throw new Error("Usuário não encontrado.");
-      }
-      
-      // Convert createdAt string back to Date object
-      if (typeof user.createdAt === 'string') {
-        user.createdAt = new Date(user.createdAt);
-      }
-      
-      // Login successful
-      setCurrentUser(user);
-      localStorage.setItem('palavraViva_user', JSON.stringify(user));
+      if (error) throw error;
       
     } catch (error) {
-      console.error("Erro ao fazer login:", error);
+      console.error("Error signing in:", error);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  // Mock Google sign-in function
+  // Sign in with Google
   const signInWithGoogle = async () => {
     setLoading(true);
     
     try {
-      // In a real app, this would connect to Google OAuth
-      // For now, we'll simulate it with a random Google user
-      const randomId = Math.floor(Math.random() * 1000);
-      const googleUser: User = {
-        id: `google_${randomId}`,
-        name: `Usuário Google ${randomId}`,
-        email: `usuario${randomId}@gmail.com`,
-        photoURL: `https://i.pravatar.cc/150?img=${randomId % 70}`,
-        level: 1,
-        totalReflections: 0,
-        chaptersRead: 0,
-        consecutiveDays: 0,
-        createdAt: new Date()
-      };
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
       
-      // Save to users list if not exists
-      const users = JSON.parse(localStorage.getItem('palavraViva_users') || '[]');
-      if (!users.find((u: any) => u.id === googleUser.id)) {
-        users.push(googleUser);
-        localStorage.setItem('palavraViva_users', JSON.stringify(users));
-      }
+      if (error) throw error;
       
-      setCurrentUser(googleUser);
-      localStorage.setItem('palavraViva_user', JSON.stringify(googleUser));
     } catch (error) {
-      console.error("Erro ao fazer login com Google:", error);
+      console.error("Error signing in with Google:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -198,23 +216,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
-      if (!currentUser) throw new Error("Nenhum usuário logado.");
+      if (!currentUser) throw new Error("No user logged in");
       
-      // Update current user
-      const updatedUser = { ...currentUser, ...data };
+      // Map our User type to Supabase profile columns
+      const profileData: any = {};
+      if (data.name) profileData.name = data.name;
+      if (data.photoURL) profileData.photo_url = data.photoURL;
+      if (data.level !== undefined) profileData.level = data.level;
+      if (data.totalReflections !== undefined) profileData.total_reflections = data.totalReflections;
+      if (data.chaptersRead !== undefined) profileData.chapters_read = data.chaptersRead;
+      if (data.consecutiveDays !== undefined) profileData.consecutive_days = data.consecutiveDays;
       
-      // Update in users list
-      const users = JSON.parse(localStorage.getItem('palavraViva_users') || '[]');
-      const updatedUsers = users.map((u: any) => 
-        u.id === currentUser.id ? { ...u, ...data } : u
-      );
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', currentUser.id);
+        
+      if (error) throw error;
       
-      localStorage.setItem('palavraViva_users', JSON.stringify(updatedUsers));
-      localStorage.setItem('palavraViva_user', JSON.stringify(updatedUser));
-      setCurrentUser(updatedUser);
+      // Update local state
+      setCurrentUser(prev => prev ? { ...prev, ...data } : null);
       
     } catch (error) {
-      console.error("Erro ao atualizar perfil:", error);
+      console.error("Error updating profile:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -226,11 +250,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
-      // Clear user data
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       setCurrentUser(null);
-      localStorage.removeItem('palavraViva_user');
+      
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Error signing out:", error);
     } finally {
       setLoading(false);
     }
