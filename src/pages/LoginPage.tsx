@@ -1,11 +1,8 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/LoginForm';
-import AdminCreator from '@/components/AdminCreator';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const LoginPage: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -31,29 +28,14 @@ const LoginPage: React.FC = () => {
           <h1 className="text-3xl font-bold mb-2">Palavra Viva</h1>
           <p className="text-muted-foreground">Faça login para continuar</p>
         </div>
-
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="admin">Admin</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="login">
-            <Card>
-              <CardContent className="pt-6">
-                <LoginForm />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="admin">
-            <Card>
-              <CardContent className="pt-6">
-                <AdminCreator />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        
+        <DailyVerse />
+        
+        <Card>
+          <CardContent className="pt-6">
+            <LoginForm />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

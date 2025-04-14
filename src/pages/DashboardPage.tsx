@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { getLevelTitle } from '@/utils/achievementUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { UserReflection } from '@/data/bibleData';
+import DailyVerse from '@/components/DailyVerse';
 
 const DashboardPage: React.FC = () => {
   const { currentUser, updateProfile } = useAuth();
@@ -119,6 +120,8 @@ const DashboardPage: React.FC = () => {
         </div>
         <UserAvatar user={currentUser} showLevel={true} size="lg" />
       </div>
+
+      <DailyVerse />
 
       {loading ? (
         <div className="text-center py-12">
