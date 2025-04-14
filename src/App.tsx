@@ -32,7 +32,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/admin-setup" element={<AdminCreator />} />
+              <Route path="/upgrade-pro" element={<AdminCreator />} />
               
               {/* Protected routes */}
               <Route 
