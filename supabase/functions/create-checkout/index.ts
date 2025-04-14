@@ -119,7 +119,7 @@ serve(async (req) => {
       customer: customerId,
       line_items: [
         {
-          price: 'price_1RDogOFZLNoNkWEexA6EV70N', // Using the specific price ID
+          price: 'price_1RDoYDFMjb3SJCYocFbAuMHQ', // Using the new specific price ID
           quantity: 1,
         },
       ],

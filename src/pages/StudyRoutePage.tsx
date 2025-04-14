@@ -21,24 +21,25 @@ interface LocationState {
 const FREE_PLAN_VERSE_LIMIT = 2;
 
 const StudyRoutePage: React.FC = () => {
-  const { currentUser, updateProfile, isPro, refreshSubscription } = useAuth();
+  const { currentUser, updateProfile, isPro } = useAuth();
   const [readVerses, setReadVerses] = useState<string[]>([]);
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const location = useLocation();
+  const hasTriggeredRefresh = useRef(false);
 
   // Extract scrollToVerse from location state
   const locationState = location.state as LocationState;
   const scrollToVerseId = locationState?.scrollToVerse;
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !dataLoaded) {
       loadUserData();
       updateUserStreak();
-      refreshSubscription();
     }
-  }, [currentUser]);
+  }, [currentUser, dataLoaded]);
 
   // Handle scrolling to a specific verse when it's specified in the location state
   useEffect(() => {
@@ -89,6 +90,7 @@ const StudyRoutePage: React.FC = () => {
       
       setReflections(formattedReflections);
       
+      // Só atualiza o perfil se realmente precisa para evitar atualizações em cascata
       if (currentUser.chaptersRead !== verseIds.length || 
           currentUser.totalReflections !== formattedReflections.length) {
         await updateProfile({
@@ -96,6 +98,8 @@ const StudyRoutePage: React.FC = () => {
           totalReflections: formattedReflections.length
         });
       }
+      
+      setDataLoaded(true);
       
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -131,26 +135,36 @@ const StudyRoutePage: React.FC = () => {
       today.setHours(0, 0, 0, 0);
       
       let newStreak = profileData.consecutive_days;
+      let needsUpdate = false;
       
       if (lastAccess.getTime() === yesterday.getTime()) {
         newStreak += 1;
-        await updateProfile({ consecutiveDays: newStreak });
+        needsUpdate = true;
       } 
       else if (lastAccess.getTime() < yesterday.getTime()) {
         newStreak = 1;
+        needsUpdate = true;
+      }
+      
+      // Só atualiza se realmente houver mudança no consecutive_days
+      if (needsUpdate) {
         await updateProfile({ consecutiveDays: newStreak });
       }
       
-      await supabase
-        .from('profiles')
-        .update({ last_access: today.toISOString() })
-        .eq('id', currentUser.id);
+      // Atualiza o last_access apenas se for um dia diferente
+      if (lastAccess.getTime() !== today.getTime()) {
+        await supabase
+          .from('profiles')
+          .update({ last_access: today.toISOString() })
+          .eq('id', currentUser.id);
+      }
       
     } catch (error) {
       console.error("Error updating user streak:", error);
     }
   };
 
+  // Restante do código do componente permanece igual...
   const handleMarkAsRead = async (verseId: string) => {
     if (!currentUser) return;
     if (readVerses.includes(verseId)) return;
