@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = "https://mcoeiucylazrjvhaemmc.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "sk_test_51RDoMPFMjb3SJCYouSPsQdL3jQ6zmMSwO46mBwP9uRElZlpMGUf43b7Wz92VvJmxWh7tfPnNQAsdftr75UtrunVr001aTJ6o8J";
 const PRICE_ID = "price_1RDoYDFMjb3SJCYocFbAuMHQ";
 
 // Helper logging function
@@ -37,17 +37,6 @@ serve(async (req) => {
       });
     }
     
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      log("ERROR: Supabase credentials are not set", { 
-        SUPABASE_URL_SET: !!SUPABASE_URL, 
-        SUPABASE_SERVICE_ROLE_KEY_SET: !!SUPABASE_SERVICE_ROLE_KEY 
-      });
-      return new Response(JSON.stringify({ error: "Server configuration error: Missing Supabase credentials" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
-    }
-    
     // Verify authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -59,7 +48,7 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    log("Token extracted");
+    log("Token extracted", { tokenLength: token.length });
     
     // Initialize Supabase client
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -93,7 +82,7 @@ serve(async (req) => {
       // Initialize Stripe with verbose error logging
       log("Initializing Stripe with key", { keyLength: STRIPE_SECRET_KEY.length });
       const stripe = new Stripe(STRIPE_SECRET_KEY, { 
-        apiVersion: "2023-10-16",
+        apiVersion: "2023-10-16"
       });
       
       // Log successfully initialized Stripe

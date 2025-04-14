@@ -32,4 +32,7 @@ email = ["en", "pt"]
 
 # Add specific configuration for the create-checkout function
 [functions.create-checkout]
+verify_jwt = false
+
+[functions.customer-portal]
 verify_jwt = true
