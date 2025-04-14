@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,6 +19,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'serif': ['Playfair Display', 'serif'],
+				'sans': ['Inter', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -51,6 +56,28 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				celestial: {
+					DEFAULT: '#D3E4FD',
+					50: '#F1F8FF',
+					100: '#E1EFFF',
+					200: '#C3DFFF',
+					300: '#A5CFFF',
+					400: '#87BFFF',
+					500: '#5A9EFF',
+					600: '#3D89FF',
+					700: '#1F74FF'
+				},
+				gold: {
+					DEFAULT: '#F5E9C9',
+					50: '#FDF9EF',
+					100: '#FCF5E5',
+					200: '#F9EBCC',
+					300: '#F5E1B2',
+					400: '#F2D799',
+					500: '#EECD7F',
+					600: '#EBC366',
+					700: '#E7B94C'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
