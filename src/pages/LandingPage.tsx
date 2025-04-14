@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -32,25 +31,6 @@ const features = [
   }
 ];
 
-// Testimonials
-const testimonials = [
-  {
-    quote: "O Palavra Viva transformou meus estudos bíblicos. Agora consigo manter um registro de todas as minhas reflexões.",
-    author: "João Silva",
-    role: "Estudante de Teologia"
-  },
-  {
-    quote: "Finalmente encontrei um app que me ajuda a manter consistência nos meus estudos bíblicos diários.",
-    author: "Maria Santos",
-    role: "Professora"
-  },
-  {
-    quote: "As conquistas me mantêm motivado a continuar estudando. Excelente ferramenta!",
-    author: "Pedro Oliveira",
-    role: "Pastor"
-  }
-];
-
 // Features for both plans
 const planFeatures = {
   free: [
@@ -75,6 +55,7 @@ const LandingPage: React.FC = () => {
   const [subscribersCount, setSubscribersCount] = useState<number>(0);
   const [reflectionsCount, setReflectionsCount] = useState<number>(0);
   const [versesReadCount, setVersesReadCount] = useState<number>(0);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Redirect if already authenticated
@@ -113,6 +94,16 @@ const LandingPage: React.FC = () => {
         
         if (versesReadError) throw versesReadError;
         setVersesReadCount(versesReadCount || 0);
+        
+        // Fetch testimonials
+        const { data: testimonialsData, error: testimonialsError } = await supabase
+          .from('testimonials')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(3);
+        
+        if (testimonialsError) throw testimonialsError;
+        setTestimonials(testimonialsData || []);
         
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -355,8 +346,8 @@ const LandingPage: React.FC = () => {
                 </svg>
                 <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">{testimonial.quote}</p>
                 <div>
-                  <p className="font-bold text-lg">{testimonial.author}</p>
-                  <p className="text-gray-500 dark:text-gray-400">{testimonial.role}</p>
+                  <p className="font-bold text-lg">{testimonial.author_name}</p>
+                  <p className="text-gray-500 dark:text-gray-400">{testimonial.author_role}</p>
                 </div>
               </div>
             ))}
