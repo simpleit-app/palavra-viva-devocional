@@ -28,10 +28,11 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
   const getIconComponent = (iconName: string) => {
     // Convert first character to uppercase and the rest as is
     const pascalCaseName = iconName.charAt(0).toUpperCase() + iconName.slice(1);
-    return LucideIcons[pascalCaseName as keyof typeof LucideIcons] || Award;
+    const IconComponent = LucideIcons[pascalCaseName as keyof typeof LucideIcons] || Award;
+    return IconComponent;
   };
   
-  const Icon = getIconComponent(achievement.icon);
+  const IconComponent = getIconComponent(achievement.icon);
   
   return (
     <Card className={`achievement-card border ${unlocked ? 'border-gold-400' : 'border-slate-200 dark:border-slate-700'}`}>
@@ -41,7 +42,7 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
             ? 'bg-gold-100 text-gold-700 dark:bg-gold-900 dark:text-gold-300' 
             : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
         }`}>
-          <Icon className="h-5 w-5" />
+          <IconComponent className="h-5 w-5" />
         </div>
         <div className="flex-1">
           <h3 className="font-medium">{achievement.title}</h3>
