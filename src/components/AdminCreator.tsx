@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 const AdminCreator = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
-  const { refreshSubscription } = useAuth();
+  const { refreshSubscription, isPro } = useAuth();
   const { toast } = useToast();
 
   const upgradeUserToPro = async () => {
@@ -39,6 +39,12 @@ const AdminCreator = () => {
       
       // Now manually refresh the subscription status in the global auth context
       await refreshSubscription();
+      
+      // Double-check if the update was successful by refreshing again
+      setTimeout(async () => {
+        await refreshSubscription();
+        console.log('Subscription refreshed again, isPro status:', isPro);
+      }, 1000);
       
       setResult({ 
         success: true, 
