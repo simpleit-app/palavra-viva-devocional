@@ -165,7 +165,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <span className="text-3xl font-bold">R$29,90</span>
+            <span className="text-3xl font-bold">R$39,90</span>
             <span className="text-muted-foreground">/mês</span>
           </div>
           
@@ -245,7 +245,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold">Plano Pro</h3>
-          <p className="text-muted-foreground">Apenas R$29,90/mês</p>
+          <p className="text-muted-foreground">Apenas R$39,90/mês</p>
         </div>
         {isPro && <Badge>Seu Plano Atual</Badge>}
       </div>

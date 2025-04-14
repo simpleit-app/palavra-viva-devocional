@@ -114,20 +114,12 @@ serve(async (req) => {
       }
     }
     
-    // Create checkout session
+    // Create checkout session with the specific price ID
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
         {
-          price_data: {
-            currency: "brl",
-            product_data: { 
-              name: "Palavra Viva Pro",
-              description: "Acesso completo à Rota de Estudo Bíblico e Reflexões ilimitadas"
-            },
-            unit_amount: 2990, // R$29.90
-            recurring: { interval: "month" },
-          },
+          price: 'price_1RDogOFZLNoNkWEexA6EV70N', // Using the specific price ID
           quantity: 1,
         },
       ],
