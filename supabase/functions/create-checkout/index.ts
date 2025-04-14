@@ -78,6 +78,19 @@ serve(async (req) => {
     const user = userData.user;
     log("User authenticated", { id: user.id, email: user.email });
     
+    // Parse request body to get coupon code if provided
+    let couponCode: string | undefined;
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        couponCode = body.couponCode;
+        log("Received request with coupon code", { couponCode });
+      } catch (error) {
+        log("No body or invalid JSON in request", { error: (error as Error).message });
+        // Continue without coupon code
+      }
+    }
+    
     try {
       // Initialize Stripe with verbose error logging
       log("Initializing Stripe with key", { keyLength: STRIPE_SECRET_KEY.length });
@@ -162,20 +175,59 @@ serve(async (req) => {
         }
       }
       
+      // Validate coupon code if provided
+      if (couponCode) {
+        try {
+          log("Validating coupon code", { couponCode });
+          const coupon = await stripe.coupons.retrieve(couponCode);
+          log("Coupon validated successfully", { 
+            coupon: coupon.id,
+            percentOff: coupon.percent_off,
+            amountOff: coupon.amount_off
+          });
+        } catch (couponError: any) {
+          log("ERROR: Invalid coupon code", { 
+            error: couponError.message,
+            code: couponError.code
+          });
+          return new Response(JSON.stringify({ 
+            error: `Invalid coupon code: ${couponError.message}` 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
+        }
+      }
+      
       // Create checkout session with the specified price
-      log("Creating checkout session", { priceId: PRICE_ID, customerId });
+      log("Creating checkout session", { 
+        priceId: PRICE_ID, 
+        customerId,
+        couponCode
+      });
       
       try {
         const origin = req.headers.get("origin") || "http://localhost:5173";
         log("Using origin for redirect", { origin });
         
-        const session = await stripe.checkout.sessions.create({
+        const sessionConfig: Stripe.Checkout.SessionCreateParams = {
           customer: customerId,
           line_items: [{ price: PRICE_ID, quantity: 1 }],
           mode: "subscription",
           success_url: `${origin}/dashboard?success=true`,
           cancel_url: `${origin}/dashboard?canceled=true`,
-        });
+        };
+        
+        // Apply coupon if provided and valid
+        if (couponCode) {
+          sessionConfig.discounts = [
+            {
+              coupon: couponCode,
+            },
+          ];
+        }
+        
+        const session = await stripe.checkout.sessions.create(sessionConfig);
         
         log("Checkout session created successfully", { 
           sessionId: session.id,
