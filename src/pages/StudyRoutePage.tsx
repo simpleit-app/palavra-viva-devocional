@@ -1,26 +1,73 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import BibleVerseCard from '@/components/BibleVerseCard';
-import { bibleVerses, userProgress, userReflections } from '@/data/bibleData';
+import { bibleVerses, userReflections } from '@/data/bibleData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 
 const StudyRoutePage: React.FC = () => {
   const { currentUser } = useAuth();
-  const [readVerses, setReadVerses] = useState<string[]>(userProgress.chaptersRead);
+  const [readVerses, setReadVerses] = useState<string[]>([]);
   const [reflections, setReflections] = useState(userReflections);
+
+  // Carrega as reflexões e versículos lidos do localStorage ao iniciar
+  useEffect(() => {
+    if (currentUser) {
+      const savedReflections = localStorage.getItem('palavraViva_reflections');
+      const savedReadVerses = localStorage.getItem(`palavraViva_readVerses_${currentUser.id}`);
+      
+      if (savedReflections) {
+        try {
+          const parsedReflections = JSON.parse(savedReflections);
+          setReflections(parsedReflections.map((item: any) => ({
+            ...item,
+            createdAt: new Date(item.createdAt)
+          })));
+        } catch (error) {
+          console.error("Erro ao carregar reflexões:", error);
+        }
+      }
+      
+      if (savedReadVerses) {
+        try {
+          setReadVerses(JSON.parse(savedReadVerses));
+        } catch (error) {
+          console.error("Erro ao carregar versículos lidos:", error);
+        }
+      }
+    }
+  }, [currentUser]);
 
   if (!currentUser) return null;
 
   const handleMarkAsRead = (verseId: string) => {
     if (readVerses.includes(verseId)) return;
     
-    setReadVerses([...readVerses, verseId]);
+    const updatedReadVerses = [...readVerses, verseId];
+    setReadVerses(updatedReadVerses);
+    
+    // Persiste os versículos lidos no localStorage
+    localStorage.setItem(`palavraViva_readVerses_${currentUser.id}`, JSON.stringify(updatedReadVerses));
+    
+    // Atualiza as estatísticas do usuário
+    updateUserStats(updatedReadVerses);
     
     toast({
       title: "Versículo marcado como lido!",
       description: "Seu progresso foi atualizado.",
+    });
+  };
+
+  const updateUserStats = (verses: string[]) => {
+    if (!currentUser) return;
+    
+    // Atualiza as estatísticas do usuário (chaptersRead)
+    const { updateProfile } = useAuth();
+    updateProfile({
+      chaptersRead: verses.length
+    }).catch(error => {
+      console.error("Erro ao atualizar estatísticas:", error);
     });
   };
 
@@ -38,19 +85,57 @@ const StudyRoutePage: React.FC = () => {
       createdAt: new Date()
     };
 
+    let updatedReflections;
     if (existingReflectionIndex >= 0) {
       // Update existing reflection
-      const updatedReflections = [...reflections];
+      updatedReflections = [...reflections];
       updatedReflections[existingReflectionIndex] = newReflection;
-      setReflections(updatedReflections);
     } else {
       // Add new reflection
-      setReflections([...reflections, newReflection]);
+      updatedReflections = [...reflections, newReflection];
     }
+    
+    setReflections(updatedReflections);
+    
+    // Persiste as reflexões no localStorage
+    saveReflectionsToLocalStorage(updatedReflections);
+    
+    // Atualiza as estatísticas do usuário
+    updateUserReflectionStats(updatedReflections);
 
     toast({
       title: "Reflexão salva com sucesso!",
       description: "Sua reflexão foi armazenada.",
+    });
+  };
+
+  const saveReflectionsToLocalStorage = (updatedReflections: typeof reflections) => {
+    try {
+      localStorage.setItem('palavraViva_reflections', JSON.stringify(updatedReflections));
+    } catch (error) {
+      console.error("Erro ao salvar reflexões:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar sua reflexão.",
+      });
+    }
+  };
+
+  const updateUserReflectionStats = (updatedReflections: typeof reflections) => {
+    if (!currentUser) return;
+    
+    // Conta quantas reflexões o usuário atual tem
+    const userReflectionsCount = updatedReflections.filter(
+      ref => ref.userId === currentUser.id
+    ).length;
+    
+    // Atualiza as estatísticas do usuário
+    const { updateProfile } = useAuth();
+    updateProfile({
+      totalReflections: userReflectionsCount
+    }).catch(error => {
+      console.error("Erro ao atualizar estatísticas:", error);
     });
   };
 

@@ -1,7 +1,6 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
-import { userReflections, bibleVerses } from '@/data/bibleData';
+import { bibleVerses } from '@/data/bibleData';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, Share2 } from 'lucide-react';
@@ -18,18 +17,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { UserReflection } from '@/data/bibleData';
 
 const ReflectionsPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const [reflections, setReflections] = useState(userReflections);
+  const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [editingReflection, setEditingReflection] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reflectionToDelete, setReflectionToDelete] = useState<string | null>(null);
 
+  useEffect(() => {
+    const savedReflections = localStorage.getItem('palavraViva_reflections');
+    if (savedReflections) {
+      try {
+        const parsedReflections = JSON.parse(savedReflections);
+        setReflections(parsedReflections.map((item: any) => ({
+          ...item,
+          createdAt: new Date(item.createdAt)
+        })));
+      } catch (error) {
+        console.error("Erro ao carregar reflexões:", error);
+      }
+    }
+  }, []);
+
   if (!currentUser) return null;
 
-  const handleEditStart = (reflection: typeof userReflections[0]) => {
+  const handleEditStart = (reflection: UserReflection) => {
     setEditingReflection(reflection.id);
     setEditText(reflection.text);
   };
@@ -43,6 +58,8 @@ const ReflectionsPage: React.FC = () => {
     
     setReflections(updatedReflections);
     setEditingReflection(null);
+    
+    saveReflectionsToLocalStorage(updatedReflections);
     
     toast({
       title: "Reflexão atualizada!",
@@ -69,6 +86,10 @@ const ReflectionsPage: React.FC = () => {
       setDeleteConfirmOpen(false);
       setReflectionToDelete(null);
       
+      saveReflectionsToLocalStorage(updatedReflections);
+      
+      updateUserReflectionStats(updatedReflections);
+      
       toast({
         title: "Reflexão removida",
         description: "Sua reflexão foi excluída com sucesso.",
@@ -76,7 +97,35 @@ const ReflectionsPage: React.FC = () => {
     }
   };
 
-  const handleShareReflection = (reflection: typeof userReflections[0]) => {
+  const saveReflectionsToLocalStorage = (updatedReflections: UserReflection[]) => {
+    try {
+      localStorage.setItem('palavraViva_reflections', JSON.stringify(updatedReflections));
+    } catch (error) {
+      console.error("Erro ao salvar reflexões:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar suas alterações.",
+      });
+    }
+  };
+
+  const updateUserReflectionStats = (updatedReflections: UserReflection[]) => {
+    if (!currentUser) return;
+    
+    const userReflectionsCount = updatedReflections.filter(
+      ref => ref.userId === currentUser.id
+    ).length;
+    
+    const { updateProfile } = useAuth();
+    updateProfile({
+      totalReflections: userReflectionsCount
+    }).catch(error => {
+      console.error("Erro ao atualizar estatísticas:", error);
+    });
+  };
+
+  const handleShareReflection = (reflection: UserReflection) => {
     const verse = bibleVerses.find(v => v.id === reflection.verseId);
     
     if (!verse) return;
@@ -112,7 +161,6 @@ const ReflectionsPage: React.FC = () => {
     });
   };
 
-  // Sort reflections by date, newest first
   const sortedReflections = [...reflections]
     .filter(reflection => reflection.userId === currentUser.id)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
