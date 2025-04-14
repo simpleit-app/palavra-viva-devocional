@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import UserAvatar from './UserAvatar';
-import { Moon, Sun, Menu, X } from 'lucide-react';
+import { Moon, Sun, Menu, X, UserCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -66,12 +66,12 @@ const NavBar: React.FC = () => {
           </Button>
 
           <div className="hidden md:flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <UserAvatar user={currentUser} showLevel={false} size="sm" />
               <span className="text-sm font-medium hidden md:inline-block">
                 {currentUser.name.split(' ')[0]}
               </span>
-            </div>
+            </Link>
             <Button variant="outline" size="sm" onClick={signOut}>
               Sair
             </Button>
@@ -87,13 +87,17 @@ const NavBar: React.FC = () => {
             <SheetContent side="right" className="w-[300px] sm:w-[350px] pt-12">
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-2">
+                  <Link 
+                    to="/profile" 
+                    className="flex items-center gap-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     <UserAvatar user={currentUser} showLevel={true} size="md" />
                     <div>
                       <p className="font-medium">{currentUser.name}</p>
                       <p className="text-xs text-muted-foreground">{currentUser.email}</p>
                     </div>
-                  </div>
+                  </Link>
                   <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
                     <X className="h-5 w-5" />
                   </Button>
@@ -114,6 +118,21 @@ const NavBar: React.FC = () => {
                       {item.label}
                     </Link>
                   ))}
+                  
+                  <Link
+                    to="/profile"
+                    className={`px-4 py-2 rounded-md text-base font-medium transition-colors ${
+                      location.pathname === '/profile' 
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="h-4 w-4" />
+                      Meu Perfil
+                    </div>
+                  </Link>
                 </nav>
                 
                 <div className="mt-auto pt-6">

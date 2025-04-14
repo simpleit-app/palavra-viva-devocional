@@ -13,6 +13,7 @@ import DashboardPage from "./pages/DashboardPage";
 import StudyRoutePage from "./pages/StudyRoutePage";
 import ReflectionsPage from "./pages/ReflectionsPage";
 import AchievementsPage from "./pages/AchievementsPage";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,17 @@ const App = () => (
                     <>
                       <NavBar />
                       <AchievementsPage />
+                    </>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <>
+                      <NavBar />
+                      <ProfilePage />
                     </>
                   </ProtectedRoute>
                 } 
