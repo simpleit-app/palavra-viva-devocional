@@ -9,7 +9,6 @@ import { Check, X, BookOpen, PenLine, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
 
-// App features with icons instead of screenshots
 const features = [
   {
     title: "Rota de Estudo",
@@ -31,7 +30,6 @@ const features = [
   }
 ];
 
-// Features for both plans
 const planFeatures = {
   free: [
     "Acesso a todas as passagens bíblicas",
@@ -58,19 +56,16 @@ const LandingPage: React.FC = () => {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
 
-  // Fetch data from Supabase
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        // Fetch subscribers count
         const { count: subscribersCount, error: subscribersError } = await supabase
           .from('subscribers')
           .select('*', { count: 'exact', head: true })
@@ -79,7 +74,6 @@ const LandingPage: React.FC = () => {
         if (subscribersError) throw subscribersError;
         setSubscribersCount(subscribersCount || 0);
         
-        // Fetch reflections count - get the actual count from the reflections table
         const { count: reflectionsCount, error: reflectionsError } = await supabase
           .from('reflections')
           .select('*', { count: 'exact', head: true });
@@ -87,7 +81,6 @@ const LandingPage: React.FC = () => {
         if (reflectionsError) throw reflectionsError;
         setReflectionsCount(reflectionsCount || 0);
         
-        // Fetch read verses count
         const { count: versesReadCount, error: versesReadError } = await supabase
           .from('read_verses')
           .select('*', { count: 'exact', head: true });
@@ -95,7 +88,6 @@ const LandingPage: React.FC = () => {
         if (versesReadError) throw versesReadError;
         setVersesReadCount(versesReadCount || 0);
         
-        // Fetch testimonials
         const { data: testimonialsData, error: testimonialsError } = await supabase
           .from('testimonials')
           .select('*')
@@ -107,7 +99,6 @@ const LandingPage: React.FC = () => {
         
       } catch (error) {
         console.error('Error fetching stats:', error);
-        // Fallback values if we can't get real data
         setSubscribersCount(523);
         setReflectionsCount(10000);
         setVersesReadCount(5000);
@@ -121,7 +112,6 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -134,7 +124,7 @@ const LandingPage: React.FC = () => {
                 <path d="M21 6v13"></path>
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Palavra Viva</h1>
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white">Palavra Viva</h1>
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
@@ -154,16 +144,15 @@ const LandingPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
             Seu Aplicativo de Estudo Bíblico
           </Badge>
-          <h1 className="text-7xl md:text-9xl font-bold mb-8 max-w-5xl mx-auto">
+          <h1 className="text-5xl md:text-6xl font-bold mb-8 max-w-5xl mx-auto">
             Organize seus estudos bíblicos com o <span className="text-primary">Palavra Viva</span>
           </h1>
-          <p className="text-2xl text-gray-600 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
             Uma plataforma completa para suas reflexões bíblicas, com recursos de gamificação 
             para manter sua consistência nos estudos.
           </p>
@@ -176,7 +165,6 @@ const LandingPage: React.FC = () => {
             </Button>
           </div>
           
-          {/* Stats */}
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm">
               {loading ? (
@@ -206,17 +194,16 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Features with Icons */}
       <section id="features" className="py-20 px-4 bg-gray-50 dark:bg-slate-800/50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Recursos
             </Badge>
-            <h2 className="text-6xl md:text-7xl font-bold mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Tudo o que você precisa para seus estudos bíblicos
             </h2>
-            <p className="text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Conheça os principais recursos do Palavra Viva e como eles podem transformar sua jornada espiritual.
             </p>
           </div>
@@ -235,23 +222,21 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Pricing */}
       <section id="pricing" className="py-20 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Preços
             </Badge>
-            <h2 className="text-6xl md:text-7xl font-bold mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Escolha o plano ideal para você
             </h2>
-            <p className="text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Comece gratuitamente e atualize quando precisar de mais recursos.
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Free Plan */}
             <Card className="border-2 border-gray-200 dark:border-gray-700">
               <CardHeader>
                 <CardTitle className="text-4xl">Plano Gratuito</CardTitle>
@@ -284,7 +269,6 @@ const LandingPage: React.FC = () => {
               </CardFooter>
             </Card>
             
-            {/* Pro Plan */}
             <Card className="border-2 border-primary relative">
               <div className="absolute top-0 right-0 bg-primary text-white px-3 py-1 text-sm font-semibold rounded-bl-md">
                 Recomendado
@@ -323,17 +307,16 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
       <section id="testimonials" className="py-20 px-4 bg-gray-50 dark:bg-slate-800/50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Depoimentos
             </Badge>
-            <h2 className="text-6xl md:text-7xl font-bold mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               O que nossos usuários dizem
             </h2>
-            <p className="text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Veja como o Palavra Viva tem ajudado pessoas a transformar seus estudos bíblicos.
             </p>
           </div>
@@ -355,14 +338,13 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <div className="bg-gradient-to-r from-celestial-300 to-primary p-12 rounded-xl max-w-5xl mx-auto">
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
               Pronto para transformar seus estudos bíblicos?
             </h2>
-            <p className="text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
               Comece gratuitamente hoje mesmo e experimente o poder do Palavra Viva.
             </p>
             <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-xl py-7 px-10" asChild>
@@ -372,8 +354,7 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-100 dark:bg-slate-900 py-12 px-4">
+      <footer className="bg-gray-100 dark:bg-slate-900 py-8 px-4">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-6 md:mb-0">
@@ -397,7 +378,7 @@ const LandingPage: React.FC = () => {
             </nav>
           </div>
           
-          <div className="border-t border-gray-200 dark:border-gray-800 mt-8 pt-8 text-center text-gray-500 dark:text-gray-400">
+          <div className="border-t border-gray-200 dark:border-gray-800 mt-4 pt-4 text-center text-gray-500 dark:text-gray-400">
             <p>© {new Date().getFullYear()} Palavra Viva. Todos os direitos reservados.</p>
           </div>
         </div>
