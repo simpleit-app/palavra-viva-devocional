@@ -122,7 +122,7 @@ const ProfilePage: React.FC = () => {
       // Se tiver um novo avatar, faz upload para o Supabase Storage
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${currentUser.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const fileName = `${currentUser.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('avatars')
