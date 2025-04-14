@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -17,23 +16,15 @@ const log = (message: string, data?: any) => {
   console.log(`[CREATE-ADMIN] ${message}${data ? ` - ${JSON.stringify(data)}` : ""}`);
 };
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    log("Handling OPTIONS request");
-    return new Response(null, { headers: corsHeaders });
-  }
-
+// Immediately invoke the function to create the admin user when deployed
+(async () => {
   try {
-    log("Function started");
+    log("Auto-creating admin user on deployment");
     
     // Check if service role key is set
     if (!SUPABASE_SERVICE_ROLE_KEY) {
       log("ERROR: SUPABASE_SERVICE_ROLE_KEY is not set");
-      return new Response(JSON.stringify({ error: "Server configuration error: Missing Supabase service role key" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
+      return;
     }
     
     // Initialize Supabase admin client with service role
@@ -53,10 +44,7 @@ serve(async (req) => {
     
     if (authError && authError.message !== 'User not found') {
       log("ERROR: Failed to check for existing admin user", { error: authError.message });
-      return new Response(JSON.stringify({ error: `Auth error: ${authError.message}` }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
+      return;
     }
     
     // Step 2: Create admin user if it doesn't exist
@@ -74,10 +62,7 @@ serve(async (req) => {
       
       if (createError) {
         log("ERROR: Failed to create admin user", { error: createError.message });
-        return new Response(JSON.stringify({ error: `Auth error: ${createError.message}` }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        });
+        return;
       }
       
       userId = newUserData.user.id;
@@ -155,24 +140,31 @@ serve(async (req) => {
       
     if (upsertError) {
       log("ERROR: Failed to create/update subscriber", { error: upsertError.message });
-      return new Response(JSON.stringify({ error: `Database error: ${upsertError.message}` }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
+      return;
     }
     
     log("Admin subscriber record created/updated successfully", { tier: 'pro' });
     
+  } catch (error: any) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log("ERROR: Unhandled exception", { error: errorMessage });
+  }
+})();
+
+// Keep the serve handler for API usage if needed
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    log("Handling OPTIONS request");
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    log("Function handler called");
+    
     return new Response(JSON.stringify({ 
       success: true, 
-      message: "Admin user created successfully with Pro access",
-      user: {
-        id: userId,
-        email: ADMIN_EMAIL,
-        name: "Administrator",
-        role: "admin",
-        subscription: "pro"
-      }
+      message: "Admin user creation endpoint active. Note: Admin user is also auto-created on deployment."
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
@@ -180,7 +172,7 @@ serve(async (req) => {
     
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    log("ERROR: Unhandled exception", { error: errorMessage });
+    log("ERROR: Unhandled exception in handler", { error: errorMessage });
     
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
