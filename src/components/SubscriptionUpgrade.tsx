@@ -12,11 +12,13 @@ import { ExternalLink, Loader2, CreditCard } from 'lucide-react';
 interface SubscriptionUpgradeProps {
   variant?: 'default' | 'inline' | 'card';
   showFeatures?: boolean;
+  className?: string; // Add className prop to the interface
 }
 
 const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({ 
   variant = 'default',
-  showFeatures = true 
+  showFeatures = true,
+  className = '' // Initialize with empty string
 }) => {
   const { currentUser, refreshSubscription, isPro } = useAuth();
   const { toast } = useToast();
@@ -108,7 +110,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   // For inline variant, render just a button
   if (variant === 'inline') {
     return (
-      <div className="w-full space-y-2">
+      <div className={`w-full space-y-2 ${className}`}>
         <Button 
           onClick={handleUpgrade} 
           disabled={loading || isPro}
@@ -153,7 +155,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   // For card variant, render a full card with features
   if (variant === 'card') {
     return (
-      <Card className={isPro ? "border-primary/40 bg-primary/5" : ""}>
+      <Card className={`${isPro ? "border-primary/40 bg-primary/5" : ""} ${className}`}>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
@@ -241,7 +243,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   
   // Default variant with optional features
   return (
-    <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+    <div className={`p-4 border rounded-lg bg-slate-50 dark:bg-slate-900 ${className}`}>
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold">Plano Pro</h3>
