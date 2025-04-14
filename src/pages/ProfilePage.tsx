@@ -117,45 +117,50 @@ const ProfilePage: React.FC = () => {
     try {
       setLoading(true);
       
-      let photoURL = currentUser.photoURL;
+      let photoURL = currentUser?.photoURL;
       
       // Upload new avatar if selected
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${currentUser.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const fileName = `${currentUser?.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
         
-        // First, check if there are existing files for this user and delete them
-        try {
-          const { data: existingFiles } = await supabase.storage
+        // First, delete existing files in the user's avatar folder
+        const { data: existingFiles, error: listError } = await supabase.storage
+          .from('avatars')
+          .list(currentUser?.id || '');
+        
+        if (listError) {
+          console.error('Error listing existing files:', listError);
+        } else if (existingFiles && existingFiles.length > 0) {
+          const filesToDelete = existingFiles.map(file => `${currentUser?.id}/${file.name}`);
+          const { error: deleteError } = await supabase.storage
             .from('avatars')
-            .list(currentUser.id);
-            
-          if (existingFiles && existingFiles.length > 0) {
-            const filesToDelete = existingFiles.map(file => `${currentUser.id}/${file.name}`);
-            await supabase.storage
-              .from('avatars')
-              .remove(filesToDelete);
+            .remove(filesToDelete);
+          
+          if (deleteError) {
+            console.error('Error deleting existing files:', deleteError);
           }
-        } catch (error) {
-          console.log("No existing files to delete or error:", error);
         }
         
         // Upload the new file
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, avatarFile, {
+          .upload(fileName, avatarFile, {
             upsert: true,
             contentType: avatarFile.type
           });
         
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw uploadError;
+        }
         
         // Get public URL
-        const { data: urlData } = supabase.storage
+        const { data: { publicUrl } } = supabase.storage
           .from('avatars')
-          .getPublicUrl(filePath);
+          .getPublicUrl(fileName);
         
-        photoURL = urlData.publicUrl;
+        photoURL = publicUrl;
       }
       
       // Update profile
@@ -165,16 +170,16 @@ const ProfilePage: React.FC = () => {
       });
       
       toast({
-        title: 'Profile updated',
-        description: 'Your information has been updated successfully.',
+        title: 'Perfil atualizado',
+        description: 'Suas informações foram atualizadas com sucesso.',
       });
       
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('Erro ao atualizar perfil:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Could not update profile. Please try again.',
+        title: 'Erro',
+        description: error.message || 'Não foi possível atualizar o perfil. Tente novamente.',
       });
     } finally {
       setLoading(false);
