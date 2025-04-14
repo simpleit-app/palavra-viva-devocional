@@ -2,42 +2,71 @@
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import BibleVerseCard from '@/components/BibleVerseCard';
-import { bibleVerses, userReflections } from '@/data/bibleData';
+import { bibleVerses } from '@/data/bibleData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 
 const StudyRoutePage: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, updateProfile } = useAuth();
   const [readVerses, setReadVerses] = useState<string[]>([]);
-  const [reflections, setReflections] = useState(userReflections);
+  const [reflections, setReflections] = useState<any[]>([]);
 
   // Carrega as reflexões e versículos lidos do localStorage ao iniciar
   useEffect(() => {
     if (currentUser) {
-      const savedReflections = localStorage.getItem('palavraViva_reflections');
+      // Carrega versículos lidos
       const savedReadVerses = localStorage.getItem(`palavraViva_readVerses_${currentUser.id}`);
+      
+      if (savedReadVerses) {
+        try {
+          const parsedReadVerses = JSON.parse(savedReadVerses);
+          setReadVerses(parsedReadVerses);
+          
+          // Atualiza as estatísticas do usuário se necessário
+          if (currentUser.chaptersRead !== parsedReadVerses.length) {
+            updateProfile({
+              chaptersRead: parsedReadVerses.length
+            });
+          }
+        } catch (error) {
+          console.error("Erro ao carregar versículos lidos:", error);
+        }
+      }
+      
+      // Carrega reflexões
+      const savedReflections = localStorage.getItem('palavraViva_reflections');
       
       if (savedReflections) {
         try {
           const parsedReflections = JSON.parse(savedReflections);
-          setReflections(parsedReflections.map((item: any) => ({
+          const formattedReflections = parsedReflections.map((item: any) => ({
             ...item,
             createdAt: new Date(item.createdAt)
-          })));
+          }));
+          
+          setReflections(formattedReflections);
+          
+          // Conta quantas reflexões o usuário atual tem
+          const userReflectionsCount = formattedReflections.filter(
+            (ref: any) => ref.userId === currentUser.id
+          ).length;
+          
+          // Atualiza as estatísticas do usuário se necessário
+          if (currentUser.totalReflections !== userReflectionsCount) {
+            updateProfile({
+              totalReflections: userReflectionsCount
+            });
+          }
         } catch (error) {
           console.error("Erro ao carregar reflexões:", error);
         }
       }
       
-      if (savedReadVerses) {
-        try {
-          setReadVerses(JSON.parse(savedReadVerses));
-        } catch (error) {
-          console.error("Erro ao carregar versículos lidos:", error);
-        }
-      }
+      // Atualiza a data do último acesso
+      const today = new Date().toDateString();
+      localStorage.setItem(`palavraViva_lastAccess_${currentUser.id}`, today);
     }
-  }, [currentUser]);
+  }, [currentUser, updateProfile]);
 
   if (!currentUser) return null;
 
@@ -63,7 +92,6 @@ const StudyRoutePage: React.FC = () => {
     if (!currentUser) return;
     
     // Atualiza as estatísticas do usuário (chaptersRead)
-    const { updateProfile } = useAuth();
     updateProfile({
       chaptersRead: verses.length
     }).catch(error => {
@@ -131,7 +159,6 @@ const StudyRoutePage: React.FC = () => {
     ).length;
     
     // Atualiza as estatísticas do usuário
-    const { updateProfile } = useAuth();
     updateProfile({
       totalReflections: userReflectionsCount
     }).catch(error => {
