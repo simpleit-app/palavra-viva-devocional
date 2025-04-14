@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, Share2, BookOpen } from 'lucide-react';
+import { Edit2, Trash2, Share2, BookOpen, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,9 +20,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserReflection } from '@/data/bibleData';
 import { supabase } from '@/integrations/supabase/client';
+import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const FREE_PLAN_REFLECTION_LIMIT = 2;
 
 const ReflectionsPage: React.FC = () => {
-  const { currentUser, updateProfile } = useAuth();
+  const { currentUser, updateProfile, isPro, refreshSubscription } = useAuth();
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [editingReflection, setEditingReflection] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -34,6 +37,7 @@ const ReflectionsPage: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       loadReflections();
+      refreshSubscription();
     }
   }, [currentUser]);
 
@@ -210,7 +214,13 @@ const ReflectionsPage: React.FC = () => {
     });
   };
 
-  const sortedReflections = [...reflections]
+  const displayReflections = isPro 
+    ? reflections 
+    : reflections.slice(0, FREE_PLAN_REFLECTION_LIMIT);
+    
+  const hasReachedFreeLimit = !isPro && reflections.length > FREE_PLAN_REFLECTION_LIMIT;
+
+  const sortedReflections = [...displayReflections]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return (
@@ -219,6 +229,21 @@ const ReflectionsPage: React.FC = () => {
         title="Minhas Reflexões"
         subtitle="Reveja e edite suas reflexões sobre os textos bíblicos."
       />
+
+      {!isPro && (
+        <Alert className="mb-6">
+          <Info className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Você está no plano gratuito com limite de {FREE_PLAN_REFLECTION_LIMIT} reflexões.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {hasReachedFreeLimit && (
+        <div className="mb-6">
+          <SubscriptionUpgrade />
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">
@@ -323,6 +348,16 @@ const ReflectionsPage: React.FC = () => {
               </Card>
             );
           })}
+          
+          {!isPro && reflections.length > FREE_PLAN_REFLECTION_LIMIT && (
+            <div className="mt-4 text-center">
+              <p className="text-muted-foreground mb-4">
+                Você tem {reflections.length - FREE_PLAN_REFLECTION_LIMIT} reflexões adicionais que não estão visíveis.
+                Atualize para o plano Pro para ter acesso a todas as suas reflexões.
+              </p>
+              <SubscriptionUpgrade variant="inline" />
+            </div>
+          )}
         </div>
       )}
 

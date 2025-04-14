@@ -1,109 +1,32 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { User, Camera, KeyRound } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/components/ui/use-toast';
 import PageTitle from '@/components/PageTitle';
 import UserAvatar from '@/components/UserAvatar';
-
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-
-// Schema for profile form validation
-const profileFormSchema = z.object({
-  name: z.string().min(2, { message: 'Name must have at least 2 characters' }),
-});
-
-// Schema for password form validation
-const passwordFormSchema = z.object({
-  currentPassword: z.string().min(6, { message: 'Current password must have at least 6 characters' }),
-  newPassword: z.string().min(6, { message: 'New password must have at least 6 characters' }),
-  confirmPassword: z.string().min(6, { message: 'Confirmation must have at least 6 characters' }),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+import { Pencil, Upload, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 
 const ProfilePage: React.FC = () => {
-  const { currentUser, updateProfile } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const { currentUser, updateProfile, refreshSubscription, isPro } = useAuth();
+  const [name, setName] = useState(currentUser?.name || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const profileForm = useForm<z.infer<typeof profileFormSchema>>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      name: currentUser?.name || '',
-    },
-  });
+  if (!currentUser) return null;
 
-  const passwordForm = useForm<z.infer<typeof passwordFormSchema>>({
-    resolver: zodResolver(passwordFormSchema),
-    defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    },
-  });
-
-  if (!currentUser) {
-    navigate('/login');
-    return null;
-  }
-
-  // Handle avatar file change
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
       
-      // Create preview URL
+      // Create a preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -112,8 +35,18 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Handle profile form submission
-  const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Nome obrigatório",
+        description: "Por favor, preencha seu nome.",
+      });
+      return;
+    }
+    
     try {
       setLoading(true);
       
@@ -165,9 +98,11 @@ const ProfilePage: React.FC = () => {
       
       // Update profile
       await updateProfile({
-        name: values.name,
-        photoURL: photoURL,
+        name,
+        photoURL,
       });
+      
+      await refreshSubscription();
       
       toast({
         title: 'Perfil atualizado',
@@ -186,212 +121,216 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Update password
-  const onPasswordSubmit = async (values: z.infer<typeof passwordFormSchema>) => {
-    try {
-      setPasswordLoading(true);
-      
-      const { error } = await supabase.auth.updateUser({
-        password: values.newPassword,
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Password updated',
-        description: 'Your password has been updated successfully.',
-      });
-      
-      passwordForm.reset();
-      setPasswordDialogOpen(false);
-      
-    } catch (error: any) {
-      console.error('Error updating password:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Could not update your password. Please try again.',
-      });
-    } finally {
-      setPasswordLoading(false);
-    }
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric'
+    });
   };
 
   return (
-    <div className="container py-8 px-4 md:px-6">
+    <div className="container max-w-4xl py-6 px-4 md:px-6">
       <PageTitle 
-        title="Your Profile" 
-        description="Manage your personal information and configure your account"
-        icon={<User className="h-6 w-6" />}
+        title="Meu Perfil"
+        subtitle="Visualize e edite suas informações pessoais."
       />
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Picture</CardTitle>
-              <CardDescription>
-                Your photo will be displayed on your profile and in interactions with the app
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center p-6">
-              <div className="relative mb-4">
-                {avatarPreview ? (
-                  <img 
-                    src={avatarPreview} 
-                    alt="Preview" 
-                    className="h-32 w-32 rounded-full object-cover border-4 border-primary/20"
+      <div className="grid gap-6 md:grid-cols-2 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Pessoais</CardTitle>
+            <CardDescription>
+              Atualize suas informações de perfil
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/20">
+                    <UserAvatar 
+                      user={currentUser} 
+                      overrideUrl={avatarPreview} 
+                      showLevel={false} 
+                      size="xl" 
+                    />
+                  </div>
+                  <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white cursor-pointer rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Upload className="w-6 h-6" />
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
                   />
-                ) : (
-                  <UserAvatar user={currentUser} size="lg" />
-                )}
-                <label 
-                  htmlFor="avatar-upload" 
-                  className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
-                >
-                  <Camera className="h-5 w-5" />
-                  <span className="sr-only">Change photo</span>
-                </label>
-                <input 
-                  id="avatar-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleAvatarChange}
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Clique na imagem para alterar seu avatar
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <Pencil className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={currentUser.email}
+                  disabled
+                  className="bg-muted/50"
                 />
               </div>
-              <p className="text-sm text-muted-foreground text-center mt-2">
-                Click on the camera icon to change your photo
-              </p>
             </CardContent>
-          </Card>
-        </div>
+            <CardFooter>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Atualizando...
+                  </>
+                ) : (
+                  'Salvar Alterações'
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
         
-        <div className="lg:col-span-2">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
+              <CardTitle>Estatísticas</CardTitle>
               <CardDescription>
-                Update your personal information
+                Seu progresso na jornada bíblica
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                  <FormField
-                    control={profileForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <Input value={currentUser.email} disabled />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Email cannot be changed
-                    </p>
-                  </FormItem>
-                  
-                  <div className="pt-4">
-                    <Button type="submit" disabled={loading}>
-                      {loading ? 'Saving...' : 'Save changes'}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Textos Lidos</p>
+                  <p className="text-2xl font-semibold">{currentUser.chaptersRead}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Reflexões</p>
+                  <p className="text-2xl font-semibold">{currentUser.totalReflections}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Nível</p>
+                  <p className="text-2xl font-semibold">{currentUser.level}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Dias Consecutivos</p>
+                  <p className="text-2xl font-semibold">{currentUser.consecutiveDays}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Membro desde {formatDate(currentUser.createdAt)}
+                </p>
+              </div>
             </CardContent>
           </Card>
           
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 mt-6">
-            <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Change Password
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Change your password</DialogTitle>
-                  <DialogDescription>
-                    Create a strong new password for your account
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <Form {...passwordForm}>
-                  <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                    <FormField
-                      control={passwordForm.control}
-                      name="newPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>New password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Enter your new password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={passwordForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm new password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Confirm your new password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <DialogFooter>
-                      <Button variant="outline" type="button" onClick={() => setPasswordDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={passwordLoading}>
-                        {passwordLoading ? 'Changing...' : 'Change Password'}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-            
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  Delete Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your account and remove your data from our servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction className="bg-destructive text-destructive-foreground">
-                    Delete Account
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <Card className={isPro ? "border-primary/40 bg-primary/5" : ""}>
+            <CardHeader>
+              <CardTitle>Plano Atual</CardTitle>
+              <CardDescription>
+                Informações da sua assinatura
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <p className="font-semibold text-xl">
+                    {isPro ? 'Plano Pro' : 'Plano Gratuito'}
+                  </p>
+                  {isPro && currentUser.subscriptionEnd && (
+                    <p className="text-sm text-muted-foreground">
+                      Expira em {formatDate(currentUser.subscriptionEnd)}
+                    </p>
+                  )}
+                </div>
+                {isPro ? (
+                  <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                    Ativo
+                  </span>
+                ) : (
+                  <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Limitado
+                  </span>
+                )}
+              </div>
+              
+              {!isPro && (
+                <div className="mt-4">
+                  <SubscriptionUpgrade variant="inline" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+      </div>
+      
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Planos Disponíveis</CardTitle>
+            <CardDescription>
+              Escolha o plano que melhor se adapta às suas necessidades
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className={!isPro ? "border-primary/40 bg-primary/5" : ""}>
+                <CardHeader>
+                  <div className="flex justify-between">
+                    <CardTitle>Plano Gratuito</CardTitle>
+                    {!isPro && <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">Seu Plano</span>}
+                  </div>
+                  <CardDescription>Acesso limitado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 my-4">
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Acesso a 2 textos bíblicos</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Limite de 2 reflexões</span>
+                    </li>
+                    <li className="flex items-start text-muted-foreground">
+                      <span className="mr-2">✗</span>
+                      <span>Sem acesso às Conquistas</span>
+                    </li>
+                  </ul>
+                  <p className="font-semibold text-center">Gratuito</p>
+                </CardContent>
+              </Card>
+              
+              <SubscriptionUpgrade variant="card" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

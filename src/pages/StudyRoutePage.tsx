@@ -8,14 +8,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { UserReflection } from '@/data/bibleData';
+import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 
 // Define a type for the location state
 interface LocationState {
   scrollToVerse?: string;
 }
 
+// Constants
+const FREE_PLAN_VERSE_LIMIT = 2;
+
 const StudyRoutePage: React.FC = () => {
-  const { currentUser, updateProfile } = useAuth();
+  const { currentUser, updateProfile, isPro, refreshSubscription } = useAuth();
   const [readVerses, setReadVerses] = useState<string[]>([]);
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +36,7 @@ const StudyRoutePage: React.FC = () => {
     if (currentUser) {
       loadUserData();
       updateUserStreak();
+      refreshSubscription();
     }
   }, [currentUser]);
 
@@ -148,6 +155,16 @@ const StudyRoutePage: React.FC = () => {
     if (!currentUser) return;
     if (readVerses.includes(verseId)) return;
     
+    // Check if user has reached the free plan limit
+    if (!isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT) {
+      toast({
+        variant: "destructive",
+        title: "Limite atingido",
+        description: "Você atingiu o limite de textos do plano gratuito. Atualize para o plano Pro para continuar.",
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('read_verses')
@@ -183,11 +200,21 @@ const StudyRoutePage: React.FC = () => {
   const handleSaveReflection = async (verseId: string, text: string) => {
     if (!currentUser) return;
     
+    // Check if user has reached the free plan limit for reflections
+    const existingReflection = reflections.find(
+      (ref) => ref.verseId === verseId && ref.userId === currentUser.id
+    );
+    
+    if (!existingReflection && !isPro && reflections.length >= FREE_PLAN_VERSE_LIMIT) {
+      toast({
+        variant: "destructive",
+        title: "Limite atingido",
+        description: "Você atingiu o limite de reflexões do plano gratuito. Atualize para o plano Pro para continuar.",
+      });
+      return;
+    }
+    
     try {
-      const existingReflection = reflections.find(
-        (ref) => ref.verseId === verseId && ref.userId === currentUser.id
-      );
-      
       if (existingReflection) {
         const { error } = await supabase
           .from('reflections')
@@ -251,6 +278,13 @@ const StudyRoutePage: React.FC = () => {
     }
   };
 
+  // Filter verses for free tier users
+  const displayVerses = isPro 
+    ? bibleVerses 
+    : bibleVerses.slice(0, FREE_PLAN_VERSE_LIMIT);
+
+  const hasReachedFreeLimit = !isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT;
+
   if (!currentUser) return null;
 
   return (
@@ -260,13 +294,28 @@ const StudyRoutePage: React.FC = () => {
         subtitle="Siga seu caminho personalizado de aprendizado bíblico."
       />
 
+      {!isPro && (
+        <Alert className="mb-6">
+          <InfoIcon className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Você está no plano gratuito com limite de {FREE_PLAN_VERSE_LIMIT} textos e {FREE_PLAN_VERSE_LIMIT} reflexões.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {hasReachedFreeLimit && (
+        <div className="mb-6">
+          <SubscriptionUpgrade />
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">Carregando seu progresso...</p>
         </div>
       ) : (
         <div className="my-6">
-          {bibleVerses.map((verse) => {
+          {displayVerses.map((verse) => {
             const isRead = readVerses.includes(verse.id);
             const userReflection = reflections.find(
               (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
@@ -289,6 +338,15 @@ const StudyRoutePage: React.FC = () => {
               </div>
             );
           })}
+          
+          {!isPro && bibleVerses.length > FREE_PLAN_VERSE_LIMIT && (
+            <div className="mt-8 text-center">
+              <p className="text-muted-foreground mb-4">
+                Atualize para o plano Pro para acessar {bibleVerses.length - FREE_PLAN_VERSE_LIMIT} textos adicionais.
+              </p>
+              <SubscriptionUpgrade variant="inline" />
+            </div>
+          )}
         </div>
       )}
     </div>

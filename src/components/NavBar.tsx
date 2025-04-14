@@ -9,19 +9,30 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const NavBar: React.FC = () => {
-  const { currentUser, signOut } = useAuth();
+  const { currentUser, signOut, isPro } = useAuth();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   if (!currentUser) return null;
 
-  const navItems = [
-    { path: '/dashboard', label: 'Home' },
-    { path: '/study-route', label: 'Rota de Estudo' },
-    { path: '/reflections', label: 'Reflexões' },
-    { path: '/achievements', label: 'Conquistas' },
-  ];
+  // Filter navItems based on subscription status
+  const getNavItems = () => {
+    const baseItems = [
+      { path: '/dashboard', label: 'Home' },
+      { path: '/study-route', label: 'Rota de Estudo' },
+      { path: '/reflections', label: 'Reflexões' },
+    ];
+    
+    // Only show Achievements for Pro users
+    if (isPro) {
+      baseItems.push({ path: '/achievements', label: 'Conquistas' });
+    }
+    
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -32,6 +43,8 @@ const NavBar: React.FC = () => {
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <Link to="/dashboard" className="flex items-center space-x-2">
           <span className="text-xl font-semibold">Palavra Viva</span>
+          {!isPro && <span className="text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Free</span>}
+          {isPro && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Pro</span>}
         </Link>
 
         {/* Desktop navigation */}

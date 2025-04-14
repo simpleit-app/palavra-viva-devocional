@@ -14,6 +14,8 @@ export type User = {
   chaptersRead: number;
   consecutiveDays: number;
   createdAt: Date;
+  subscriptionTier: string;
+  subscriptionEnd: Date | null;
 };
 
 // Define the AuthContextType
@@ -26,6 +28,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  refreshSubscription: () => Promise<void>;
+  isPro: boolean;
 };
 
 // Create the auth context with default values
@@ -38,13 +42,15 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   isAuthenticated: false,
   updateProfile: async () => {},
+  refreshSubscription: async () => {},
+  isPro: false,
 });
 
 // Custom hook to use the auth context
 export const useAuth = () => useContext(AuthContext);
 
 // Helper function to convert Supabase user data to our User type
-const formatUser = (user: SupabaseUser | null, profileData: any): User | null => {
+const formatUser = (user: SupabaseUser | null, profileData: any, subscriptionData: any): User | null => {
   if (!user || !profileData) return null;
   
   return {
@@ -57,6 +63,8 @@ const formatUser = (user: SupabaseUser | null, profileData: any): User | null =>
     chaptersRead: profileData.chapters_read,
     consecutiveDays: profileData.consecutive_days,
     createdAt: new Date(profileData.created_at),
+    subscriptionTier: subscriptionData?.subscription_tier || 'free',
+    subscriptionEnd: subscriptionData?.subscription_end ? new Date(subscriptionData.subscription_end) : null,
   };
 };
 
@@ -65,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPro, setIsPro] = useState(false);
 
   // Check for existing session on mount and setup auth listener
   useEffect(() => {
@@ -88,7 +97,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
               }
               
-              setCurrentUser(formatUser(session.user, data));
+              // Fetch subscription data
+              const token = session.access_token;
+              const subscriptionResponse = await supabase.functions.invoke('check-subscription', {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              
+              if (subscriptionResponse.error) {
+                console.error("Error checking subscription:", subscriptionResponse.error);
+              }
+              
+              const subscriptionData = subscriptionResponse.data;
+              const user = formatUser(session.user, data, subscriptionData);
+              setCurrentUser(user);
+              setIsPro(subscriptionData?.subscription_tier === 'pro');
               
               // Update last_access time
               await supabase
@@ -102,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, 0);
         } else {
           setCurrentUser(null);
+          setIsPro(false);
         }
       }
     );
@@ -123,7 +148,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
           
-          setCurrentUser(formatUser(session.user, data));
+          // Fetch subscription data
+          const token = session.access_token;
+          const subscriptionResponse = await supabase.functions.invoke('check-subscription', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          
+          if (subscriptionResponse.error) {
+            console.error("Error checking subscription:", subscriptionResponse.error);
+          }
+          
+          const subscriptionData = subscriptionResponse.data;
+          const user = formatUser(session.user, data, subscriptionData);
+          setCurrentUser(user);
+          setIsPro(subscriptionData?.subscription_tier === 'pro');
           
           // Update last_access time
           await supabase
@@ -143,6 +183,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // Refresh subscription status
+  const refreshSubscription = async () => {
+    if (!session || !currentUser) return;
+    
+    try {
+      const token = session.access_token;
+      const subscriptionResponse = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (subscriptionResponse.error) {
+        console.error("Error refreshing subscription:", subscriptionResponse.error);
+        return;
+      }
+      
+      const subscriptionData = subscriptionResponse.data;
+      
+      setCurrentUser(prev => prev ? {
+        ...prev,
+        subscriptionTier: subscriptionData?.subscription_tier || 'free',
+        subscriptionEnd: subscriptionData?.subscription_end ? new Date(subscriptionData.subscription_end) : null,
+      } : null);
+      
+      setIsPro(subscriptionData?.subscription_tier === 'pro');
+      
+    } catch (error) {
+      console.error("Error refreshing subscription:", error);
+    }
+  };
 
   // Sign up with email/password
   const signUp = async (name: string, email: string, password: string) => {
@@ -270,7 +342,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     isAuthenticated: !!currentUser,
-    updateProfile
+    updateProfile,
+    refreshSubscription,
+    isPro
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
