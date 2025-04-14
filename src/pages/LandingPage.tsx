@@ -6,26 +6,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, X } from 'lucide-react';
+import { Check, X, BookOpen, PenLine, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
 
-// App screenshots
-const screenshots = [
+// App features with icons instead of screenshots
+const features = [
   {
     title: "Rota de Estudo",
     description: "Organize sua leitura bíblica com rotas personalizadas",
-    image: "/assets/screenshot-study.png"
+    icon: BookOpen,
+    iconColor: "text-blue-500"
   },
   {
     title: "Reflexões",
     description: "Registre suas reflexões sobre as passagens bíblicas",
-    image: "/assets/screenshot-reflection.png"
+    icon: PenLine,
+    iconColor: "text-indigo-500"
   },
   {
     title: "Conquistas",
     description: "Acompanhe seu progresso e conquistas",
-    image: "/assets/screenshot-achievements.png"
+    icon: Trophy,
+    iconColor: "text-amber-500"
   }
 ];
 
@@ -49,7 +52,7 @@ const testimonials = [
 ];
 
 // Features for both plans
-const features = {
+const planFeatures = {
   free: [
     "Acesso a todas as passagens bíblicas",
     "2 reflexões diárias",
@@ -166,10 +169,10 @@ const LandingPage: React.FC = () => {
           <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
             Seu Aplicativo de Estudo Bíblico
           </Badge>
-          <h1 className="text-6xl md:text-8xl font-bold mb-8 max-w-4xl mx-auto">
+          <h1 className="text-7xl md:text-9xl font-bold mb-8 max-w-5xl mx-auto">
             Organize seus estudos bíblicos com o <span className="text-primary">Palavra Viva</span>
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
+          <p className="text-2xl text-gray-600 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
             Uma plataforma completa para suas reflexões bíblicas, com recursos de gamificação 
             para manter sua consistência nos estudos.
           </p>
@@ -212,38 +215,29 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Screenshots */}
+      {/* Features with Icons */}
       <section id="features" className="py-20 px-4 bg-gray-50 dark:bg-slate-800/50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Recursos
             </Badge>
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6">
               Tudo o que você precisa para seus estudos bíblicos
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Conheça os principais recursos do Palavra Viva e como eles podem transformar sua jornada espiritual.
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {screenshots.map((item, index) => (
-              <div key={index} className="bg-white dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md">
-                <div className="h-56 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                  <img 
-                    src={item.image} 
-                    alt={item.title} 
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Palavra+Viva';
-                    }}
-                  />
+            {features.map((item, index) => (
+              <div key={index} className="bg-white dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md p-8 text-center">
+                <div className={`mx-auto mb-6 ${item.iconColor}`}>
+                  {React.createElement(item.icon, { size: 96, strokeWidth: 1.5 })}
                 </div>
-                <div className="p-6">
-                  <h3 className="text-2xl font-bold mb-2">{item.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">{item.description}</p>
-                </div>
+                <h3 className="text-3xl font-bold mb-4">{item.title}</h3>
+                <p className="text-xl text-gray-600 dark:text-gray-300">{item.description}</p>
               </div>
             ))}
           </div>
@@ -257,10 +251,10 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Preços
             </Badge>
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6">
               Escolha o plano ideal para você
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Comece gratuitamente e atualize quando precisar de mais recursos.
             </p>
           </div>
@@ -269,24 +263,24 @@ const LandingPage: React.FC = () => {
             {/* Free Plan */}
             <Card className="border-2 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle className="text-3xl">Plano Gratuito</CardTitle>
-                <CardDescription className="text-lg">Perfeito para começar seus estudos bíblicos</CardDescription>
+                <CardTitle className="text-4xl">Plano Gratuito</CardTitle>
+                <CardDescription className="text-xl">Perfeito para começar seus estudos bíblicos</CardDescription>
                 <div className="mt-4">
-                  <span className="text-5xl font-bold">R$0</span>
+                  <span className="text-6xl font-bold">R$0</span>
                   <span className="text-gray-500 dark:text-gray-400">/mês</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {features.free.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-5 w-5 text-green-500 mr-2" />
+                  {planFeatures.free.map((feature, index) => (
+                    <li key={index} className="flex items-center text-lg">
+                      <Check className="h-6 w-6 text-green-500 mr-3 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
-                  {features.pro.slice(0, 2).map((feature, index) => (
-                    <li key={index} className="flex items-center text-gray-400">
-                      <X className="h-5 w-5 text-gray-300 mr-2" />
+                  {planFeatures.pro.slice(0, 2).map((feature, index) => (
+                    <li key={index} className="flex items-center text-lg text-gray-400">
+                      <X className="h-6 w-6 text-gray-300 mr-3 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -305,24 +299,24 @@ const LandingPage: React.FC = () => {
                 Recomendado
               </div>
               <CardHeader>
-                <CardTitle className="text-3xl">Plano Pro</CardTitle>
-                <CardDescription className="text-lg">Para quem deseja aproveitar ao máximo</CardDescription>
+                <CardTitle className="text-4xl">Plano Pro</CardTitle>
+                <CardDescription className="text-xl">Para quem deseja aproveitar ao máximo</CardDescription>
                 <div className="mt-4">
-                  <span className="text-5xl font-bold">R$19,90</span>
+                  <span className="text-6xl font-bold">R$19,90</span>
                   <span className="text-gray-500 dark:text-gray-400">/mês</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {features.free.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-5 w-5 text-green-500 mr-2" />
+                  {planFeatures.free.map((feature, index) => (
+                    <li key={index} className="flex items-center text-lg">
+                      <Check className="h-6 w-6 text-green-500 mr-3 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
-                  {features.pro.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-5 w-5 text-green-500 mr-2" />
+                  {planFeatures.pro.map((feature, index) => (
+                    <li key={index} className="flex items-center text-lg">
+                      <Check className="h-6 w-6 text-green-500 mr-3 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -345,10 +339,10 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Depoimentos
             </Badge>
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6">
               O que nossos usuários dizem
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Veja como o Palavra Viva tem ajudado pessoas a transformar seus estudos bíblicos.
             </p>
           </div>
@@ -356,13 +350,13 @@ const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <div key={index} className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-sm">
-                <svg className="w-8 h-8 text-primary mb-4" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-12 h-12 text-primary mb-6" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                   <path d="M10 8v6H6v10h10V14h-4V8h-2zm14 0v6h-4v10h10V14h-4V8h-2z"/>
                 </svg>
-                <p className="text-gray-600 dark:text-gray-300 mb-6">{testimonial.quote}</p>
+                <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">{testimonial.quote}</p>
                 <div>
-                  <p className="font-bold">{testimonial.author}</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">{testimonial.role}</p>
+                  <p className="font-bold text-lg">{testimonial.author}</p>
+                  <p className="text-gray-500 dark:text-gray-400">{testimonial.role}</p>
                 </div>
               </div>
             ))}
@@ -373,14 +367,14 @@ const LandingPage: React.FC = () => {
       {/* CTA */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
-          <div className="bg-gradient-to-r from-celestial-300 to-primary p-12 rounded-xl max-w-4xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-white">
+          <div className="bg-gradient-to-r from-celestial-300 to-primary p-12 rounded-xl max-w-5xl mx-auto">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white">
               Pronto para transformar seus estudos bíblicos?
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            <p className="text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
               Comece gratuitamente hoje mesmo e experimente o poder do Palavra Viva.
             </p>
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg py-6" asChild>
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-xl py-7 px-10" asChild>
               <Link to="/login">Começar Agora</Link>
             </Button>
           </div>
