@@ -21,7 +21,12 @@ const AchievementsPage: React.FC = () => {
     consecutiveDays: currentUser.consecutiveDays
   };
 
-  const unlockedAchievements = calculateUnlockedAchievements(achievements, userStats);
+  // Filter achievements based on user's subscription status
+  const availableAchievements = achievements.filter(achievement => 
+    !achievement.proPlan || (achievement.proPlan && isPro)
+  );
+  
+  const unlockedAchievements = calculateUnlockedAchievements(availableAchievements, userStats);
   
   // Calculate points for next level
   const currentLevelPoints = (currentUser.level - 1) * 10;
@@ -110,7 +115,7 @@ const AchievementsPage: React.FC = () => {
       <h3 className="text-lg font-medium mb-4">Minhas Medalhas</h3>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {achievements.map(achievement => (
+        {availableAchievements.map(achievement => (
           <AchievementCard 
             key={achievement.id}
             achievement={achievement}

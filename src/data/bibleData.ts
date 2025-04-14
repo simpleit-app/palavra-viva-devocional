@@ -1,4 +1,3 @@
-
 // Types for Bible Study content
 export type BibleVerse = {
   id: string;
@@ -25,6 +24,7 @@ export type Achievement = {
   icon: string;
   requiredCount: number;
   type: 'reading' | 'reflection' | 'streak';
+  proPlan?: boolean;
 };
 
 // Mock Bible verses with devotional content
@@ -160,6 +160,69 @@ export const achievements: Achievement[] = [
     icon: "bookmark",
     requiredCount: 20,
     type: "reading"
+  },
+  {
+    id: "6",
+    title: "Peregrino Fiel",
+    description: "Completou 30 dias consecutivos de leitura",
+    icon: "calendar-clock",
+    requiredCount: 30,
+    type: "streak",
+    proPlan: true
+  },
+  {
+    id: "7",
+    title: "Caminhante do Ano",
+    description: "Completou 365 dias consecutivos de leitura",
+    icon: "calendar-heart",
+    requiredCount: 365,
+    type: "streak",
+    proPlan: true
+  },
+  {
+    id: "8",
+    title: "Salmista",
+    description: "Escreveu 50 reflexões bíblicas",
+    icon: "scroll",
+    requiredCount: 50,
+    type: "reflection",
+    proPlan: true
+  },
+  {
+    id: "9",
+    title: "Profeta",
+    description: "Escreveu 100 reflexões bíblicas",
+    icon: "flame",
+    requiredCount: 100,
+    type: "reflection",
+    proPlan: true
+  },
+  {
+    id: "10",
+    title: "Romeiro",
+    description: "Leu 10 passagens bíblicas",
+    icon: "book-open-check",
+    requiredCount: 10,
+    type: "reading",
+    proPlan: true
+  },
+  {
+    id: "11",
+    title: "Evangelista",
+    description: "Leu 50 passagens bíblicas",
+    icon: "book-marked",
+    requiredCount: 50,
+    type: "reading",
+    proPlan: true
+  },
+  {
+    id: "12",
+    title: "Apóstolo",
+    description: "Leu 100 passagens bíblicas",
+    icon: "book-heart",
+    requiredCount: 100,
+    type: "reading",
+    proPlan: true
   }
 ];
 
