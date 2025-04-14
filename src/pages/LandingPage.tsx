@@ -69,6 +69,8 @@ const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [subscribersCount, setSubscribersCount] = useState<number>(0);
+  const [reflectionsCount, setReflectionsCount] = useState<number>(0);
+  const [versesReadCount, setVersesReadCount] = useState<number>(0);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -77,25 +79,45 @@ const LandingPage: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Fetch subscribers count
+  // Fetch data from Supabase
   useEffect(() => {
-    const fetchSubscribersCount = async () => {
+    const fetchStats = async () => {
       try {
-        const { count, error } = await supabase
+        // Fetch subscribers count
+        const { count: subscribersCount, error: subscribersError } = await supabase
           .from('subscribers')
           .select('*', { count: 'exact', head: true })
           .eq('subscribed', true);
         
-        if (error) throw error;
-        setSubscribersCount(count || 0);
+        if (subscribersError) throw subscribersError;
+        setSubscribersCount(subscribersCount || 0);
+        
+        // Fetch reflections count
+        const { count: reflectionsCount, error: reflectionsError } = await supabase
+          .from('reflections')
+          .select('*', { count: 'exact', head: true });
+        
+        if (reflectionsError) throw reflectionsError;
+        setReflectionsCount(reflectionsCount || 0);
+        
+        // Fetch read verses count
+        const { count: versesReadCount, error: versesReadError } = await supabase
+          .from('read_verses')
+          .select('*', { count: 'exact', head: true });
+        
+        if (versesReadError) throw versesReadError;
+        setVersesReadCount(versesReadCount || 0);
+        
       } catch (error) {
-        console.error('Error fetching subscribers count:', error);
-        // Fallback value if we can't get real data
+        console.error('Error fetching stats:', error);
+        // Fallback values if we can't get real data
         setSubscribersCount(523);
+        setReflectionsCount(10000);
+        setVersesReadCount(5000);
       }
     };
 
-    fetchSubscribersCount();
+    fetchStats();
   }, []);
 
   return (
@@ -139,18 +161,18 @@ const LandingPage: React.FC = () => {
           <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
             Seu Aplicativo de Estudo Bíblico
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 max-w-4xl mx-auto">
             Organize seus estudos bíblicos com o <span className="text-primary">Palavra Viva</span>
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
             Uma plataforma completa para suas reflexões bíblicas, com recursos de gamificação 
             para manter sua consistência nos estudos.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild>
+            <Button size="lg" asChild className="text-lg py-6">
               <Link to="/login">Começar Grátis</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" asChild className="text-lg py-6">
               <Link to="/login">Entrar na Plataforma</Link>
             </Button>
           </div>
@@ -162,12 +184,12 @@ const LandingPage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-300">Assinantes ativos</p>
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm">
-              <p className="text-4xl font-bold text-primary">10.000+</p>
+              <p className="text-4xl font-bold text-primary">{reflectionsCount}+</p>
               <p className="text-gray-600 dark:text-gray-300">Reflexões registradas</p>
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm">
-              <p className="text-4xl font-bold text-primary">31.102</p>
-              <p className="text-gray-600 dark:text-gray-300">Versículos bíblicos</p>
+              <p className="text-4xl font-bold text-primary">{versesReadCount}+</p>
+              <p className="text-gray-600 dark:text-gray-300">Versículos lidos</p>
             </div>
           </div>
         </div>
@@ -180,7 +202,7 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Recursos
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Tudo o que você precisa para seus estudos bíblicos
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -202,7 +224,7 @@ const LandingPage: React.FC = () => {
                   />
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                  <h3 className="text-2xl font-bold mb-2">{item.title}</h3>
                   <p className="text-gray-600 dark:text-gray-300">{item.description}</p>
                 </div>
               </div>
@@ -218,7 +240,7 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Preços
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Escolha o plano ideal para você
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -230,10 +252,10 @@ const LandingPage: React.FC = () => {
             {/* Free Plan */}
             <Card className="border-2 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Plano Gratuito</CardTitle>
-                <CardDescription>Perfeito para começar seus estudos bíblicos</CardDescription>
+                <CardTitle className="text-3xl">Plano Gratuito</CardTitle>
+                <CardDescription className="text-lg">Perfeito para começar seus estudos bíblicos</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">R$0</span>
+                  <span className="text-5xl font-bold">R$0</span>
                   <span className="text-gray-500 dark:text-gray-400">/mês</span>
                 </div>
               </CardHeader>
@@ -254,7 +276,7 @@ const LandingPage: React.FC = () => {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" variant="outline" asChild>
+                <Button className="w-full text-lg py-6" variant="outline" asChild>
                   <Link to="/login">Começar Grátis</Link>
                 </Button>
               </CardFooter>
@@ -266,10 +288,10 @@ const LandingPage: React.FC = () => {
                 Recomendado
               </div>
               <CardHeader>
-                <CardTitle>Plano Pro</CardTitle>
-                <CardDescription>Para quem deseja aproveitar ao máximo</CardDescription>
+                <CardTitle className="text-3xl">Plano Pro</CardTitle>
+                <CardDescription className="text-lg">Para quem deseja aproveitar ao máximo</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">R$19,90</span>
+                  <span className="text-5xl font-bold">R$19,90</span>
                   <span className="text-gray-500 dark:text-gray-400">/mês</span>
                 </div>
               </CardHeader>
@@ -290,7 +312,7 @@ const LandingPage: React.FC = () => {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" asChild>
+                <Button className="w-full text-lg py-6" asChild>
                   <Link to="/login">Assinar Pro</Link>
                 </Button>
               </CardFooter>
@@ -306,7 +328,7 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Depoimentos
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               O que nossos usuários dizem
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -335,13 +357,13 @@ const LandingPage: React.FC = () => {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <div className="bg-gradient-to-r from-celestial-300 to-primary p-12 rounded-xl max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
               Pronto para transformar seus estudos bíblicos?
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
               Comece gratuitamente hoje mesmo e experimente o poder do Palavra Viva.
             </p>
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90" asChild>
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg py-6" asChild>
               <Link to="/login">Começar Agora</Link>
             </Button>
           </div>

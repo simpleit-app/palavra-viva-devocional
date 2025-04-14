@@ -38,10 +38,10 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
       highlight && "ring-2 ring-primary ring-offset-2 bg-primary/5"
     )}>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-xl">
           <span>{verse.book} {verse.chapter}:{verse.verse}</span>
           {isRead && (
-            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-100">
+            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 dark:bg-green-900 dark:text-green-100">
               <Check className="mr-1 h-3 w-3" />
               Lido
             </span>
@@ -49,17 +49,17 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-3">
-        <p className="verse-text mb-4 text-slate-800 dark:text-slate-100">{verse.text}</p>
+        <p className="verse-text mb-4 text-lg text-slate-800 dark:text-slate-100">{verse.text}</p>
         <div className="mt-4 p-3 bg-celestial-50 dark:bg-slate-800 rounded-md">
-          <h4 className="font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center">
+          <h4 className="font-medium text-lg text-slate-700 dark:text-slate-300 mb-1 flex items-center">
             <BookOpen className="h-4 w-4 mr-1" />
             Devocional
           </h4>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{verse.summary}</p>
+          <p className="text-slate-600 dark:text-slate-300">{verse.summary}</p>
         </div>
         
         <div className="mt-4">
-          <h4 className="font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <h4 className="font-medium text-lg text-slate-700 dark:text-slate-300 mb-2">
             Minha Reflexão
           </h4>
           <Textarea
