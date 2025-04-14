@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from "@/components/ui/skeleton";
 
 // App screenshots
 const screenshots = [
@@ -71,6 +72,7 @@ const LandingPage: React.FC = () => {
   const [subscribersCount, setSubscribersCount] = useState<number>(0);
   const [reflectionsCount, setReflectionsCount] = useState<number>(0);
   const [versesReadCount, setVersesReadCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -82,6 +84,7 @@ const LandingPage: React.FC = () => {
   // Fetch data from Supabase
   useEffect(() => {
     const fetchStats = async () => {
+      setLoading(true);
       try {
         // Fetch subscribers count
         const { count: subscribersCount, error: subscribersError } = await supabase
@@ -92,7 +95,7 @@ const LandingPage: React.FC = () => {
         if (subscribersError) throw subscribersError;
         setSubscribersCount(subscribersCount || 0);
         
-        // Fetch reflections count
+        // Fetch reflections count - get the actual count from the reflections table
         const { count: reflectionsCount, error: reflectionsError } = await supabase
           .from('reflections')
           .select('*', { count: 'exact', head: true });
@@ -114,6 +117,8 @@ const LandingPage: React.FC = () => {
         setSubscribersCount(523);
         setReflectionsCount(10000);
         setVersesReadCount(5000);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -161,7 +166,7 @@ const LandingPage: React.FC = () => {
           <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
             Seu Aplicativo de Estudo Bíblico
           </Badge>
-          <h1 className="text-5xl md:text-7xl font-bold mb-8 max-w-4xl mx-auto">
+          <h1 className="text-6xl md:text-8xl font-bold mb-8 max-w-4xl mx-auto">
             Organize seus estudos bíblicos com o <span className="text-primary">Palavra Viva</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
@@ -180,15 +185,27 @@ const LandingPage: React.FC = () => {
           {/* Stats */}
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm">
-              <p className="text-4xl font-bold text-primary">{subscribersCount}+</p>
+              {loading ? (
+                <Skeleton className="h-16 w-32 mx-auto mb-2" />
+              ) : (
+                <p className="text-5xl font-bold text-primary">{subscribersCount}+</p>
+              )}
               <p className="text-gray-600 dark:text-gray-300">Assinantes ativos</p>
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm">
-              <p className="text-4xl font-bold text-primary">{reflectionsCount}+</p>
+              {loading ? (
+                <Skeleton className="h-16 w-32 mx-auto mb-2" />
+              ) : (
+                <p className="text-5xl font-bold text-primary">{reflectionsCount}+</p>
+              )}
               <p className="text-gray-600 dark:text-gray-300">Reflexões registradas</p>
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm">
-              <p className="text-4xl font-bold text-primary">{versesReadCount}+</p>
+              {loading ? (
+                <Skeleton className="h-16 w-32 mx-auto mb-2" />
+              ) : (
+                <p className="text-5xl font-bold text-primary">{versesReadCount}+</p>
+              )}
               <p className="text-gray-600 dark:text-gray-300">Versículos lidos</p>
             </div>
           </div>
@@ -202,7 +219,7 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Recursos
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6">
               Tudo o que você precisa para seus estudos bíblicos
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -240,7 +257,7 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Preços
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6">
               Escolha o plano ideal para você
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -328,7 +345,7 @@ const LandingPage: React.FC = () => {
             <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
               Depoimentos
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6">
               O que nossos usuários dizem
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -357,7 +374,7 @@ const LandingPage: React.FC = () => {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <div className="bg-gradient-to-r from-celestial-300 to-primary p-12 rounded-xl max-w-4xl mx-auto">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-white">
               Pronto para transformar seus estudos bíblicos?
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
