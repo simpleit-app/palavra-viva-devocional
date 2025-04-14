@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/LoginForm';
 import { Card, CardContent } from '@/components/ui/card';
+import DailyVerse from '@/components/DailyVerse';
 
 const LoginPage: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
