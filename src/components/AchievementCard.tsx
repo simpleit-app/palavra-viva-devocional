@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Award } from 'lucide-react';
+import { Award, LucideIcon } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { Achievement } from '@/data/bibleData';
 import { calculateProgress } from '@/utils/achievementUtils';
@@ -25,16 +25,15 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
   const progress = calculateProgress(achievement, userStats);
   
   // Convert icon name to component
-  const getIconComponent = (iconName: string) => {
+  const getIconComponent = (iconName: string): LucideIcon => {
     // Handle common icon naming variations
     const formattedName = iconName
       .split('-')
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join('');
     
-    // Look up the icon in Lucide icons
-    const IconComponent = (LucideIcons as Record<string, React.FC<any>>)[formattedName] || Award;
-    return IconComponent;
+    // Look up the icon in Lucide icons with proper type handling
+    return (LucideIcons as any)[formattedName] || Award;
   };
   
   const IconComponent = getIconComponent(achievement.icon);
