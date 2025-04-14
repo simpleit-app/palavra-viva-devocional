@@ -8,9 +8,10 @@ import { achievements } from '@/data/bibleData';
 import { getLevelTitle, calculateUnlockedAchievements } from '@/utils/achievementUtils';
 import ProgressBar from '@/components/ProgressBar';
 import UserAvatar from '@/components/UserAvatar';
+import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 
 const AchievementsPage: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, isPro } = useAuth();
 
   if (!currentUser) return null;
 
@@ -34,6 +35,21 @@ const AchievementsPage: React.FC = () => {
         title="Conquistas"
         subtitle="Acompanhe seu progresso e desbloqueie medalhas especiais."
       />
+
+      {!isPro && (
+        <Card className="mb-6 border-primary/20 bg-primary/5">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-2">
+              <h3 className="font-medium text-lg">Desbloqueie Todas as Conquistas</h3>
+              <p className="text-muted-foreground">
+                Assine o plano Pro para acessar o sistema completo de gamificação,
+                desbloquear todas as medalhas e acompanhar seu progresso!
+              </p>
+              <SubscriptionUpgrade className="mt-4" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mb-8">
         <CardContent className="pt-6">
@@ -106,6 +122,11 @@ const AchievementsPage: React.FC = () => {
 
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <p>Continue sua jornada de estudo bíblico para desbloquear mais conquistas!</p>
+        {!isPro && (
+          <div className="mt-4">
+            <SubscriptionUpgrade />
+          </div>
+        )}
       </div>
     </div>
   );

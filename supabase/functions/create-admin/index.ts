@@ -10,7 +10,7 @@ const corsHeaders = {
 const SUPABASE_URL = "https://mcoeiucylazrjvhaemmc.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const ADMIN_EMAIL = "admin@palavraviva.com";
-const ADMIN_PASSWORD = "admin@123"; // Updated password
+const ADMIN_PASSWORD = "admin@213"; // Updated to match requested password
 
 // Helper logging function
 const log = (message: string, data?: any) => {

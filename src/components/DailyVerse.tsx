@@ -5,7 +5,6 @@ import { BookOpen } from 'lucide-react';
 import { bibleVerses } from '@/data/bibleData';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
 const DailyVerse: React.FC = () => {
@@ -61,6 +60,15 @@ const DailyVerse: React.FC = () => {
           <p className="text-xs text-right text-slate-600 dark:text-slate-400 font-medium">
             {verse.book} {verse.chapter}:{verse.verse}
           </p>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-3 w-full text-xs"
+            onClick={getRandomVerse}
+          >
+            Gerar versículo aleatório
+          </Button>
         </CardContent>
       </Card>
 

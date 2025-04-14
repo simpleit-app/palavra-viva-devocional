@@ -33,7 +33,12 @@ const LoginForm: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Authentication error:', error);
-      setError(error.message || 'Falha na autenticação. Tente novamente.');
+      // Improved error messages
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Usuário ou senha inválidos. Por favor, verifique suas credenciais e tente novamente.');
+      } else {
+        setError(error.message || 'Falha na autenticação. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
