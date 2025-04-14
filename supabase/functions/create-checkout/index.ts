@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_URL = "https://mcoeiucylazrjvhaemmc.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const PRICE_ID = "price_1RDoYDFMjb3SJCYocFbAuMHQ";
@@ -94,7 +94,6 @@ serve(async (req) => {
       log("Initializing Stripe with key", { keyLength: STRIPE_SECRET_KEY.length });
       const stripe = new Stripe(STRIPE_SECRET_KEY, { 
         apiVersion: "2023-10-16",
-        httpClient: Stripe.createFetchHttpClient()
       });
       
       // Log successfully initialized Stripe
