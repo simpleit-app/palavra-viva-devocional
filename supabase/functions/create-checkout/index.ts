@@ -8,82 +8,78 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SUPABASE_URL = "https://mcoeiucylazrjvhaemmc.supabase.co";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const PRICE_ID = "price_1RDoYDFMjb3SJCYocFbAuMHQ";
 
 // Helper logging function
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+const log = (message: string, data?: any) => {
+  console.log(`[CREATE-CHECKOUT] ${message}${data ? ` - ${JSON.stringify(data)}` : ""}`);
 };
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    logStep("Function started");
-
-    // Log all environment variables for debugging (without values for security)
-    logStep("Environment variables check", {
-      STRIPE_SECRET_KEY_SET: !!STRIPE_SECRET_KEY,
-      SUPABASE_SERVICE_ROLE_KEY_SET: !!SUPABASE_SERVICE_ROLE_KEY,
-      SUPABASE_URL_SET: !!SUPABASE_URL
-    });
-
+    log("Function started");
+    
+    // Check if required environment variables are set
     if (!STRIPE_SECRET_KEY) {
-      logStep("ERROR: STRIPE_SECRET_KEY is not set");
-      return new Response(JSON.stringify({ error: "STRIPE_SECRET_KEY is not set" }), {
+      log("ERROR: STRIPE_SECRET_KEY is not set");
+      return new Response(JSON.stringify({ error: "Server configuration error: Missing Stripe key" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
     
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
-      logStep("ERROR: SUPABASE_SERVICE_ROLE_KEY is not set");
-      return new Response(JSON.stringify({ error: "SUPABASE_SERVICE_ROLE_KEY is not set" }), {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      log("ERROR: Supabase credentials are not set", { 
+        SUPABASE_URL_SET: !!SUPABASE_URL, 
+        SUPABASE_SERVICE_ROLE_KEY_SET: !!SUPABASE_SERVICE_ROLE_KEY 
+      });
+      return new Response(JSON.stringify({ error: "Server configuration error: Missing Supabase credentials" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
     
-    logStep("Environment variables verified");
-
+    // Verify authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      logStep("ERROR: No authorization header provided");
-      return new Response(JSON.stringify({ error: "No authorization header provided" }), {
+      log("ERROR: No authorization header");
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
 
     const token = authHeader.replace("Bearer ", "");
-    logStep("Token extracted from header");
+    log("Token extracted");
     
-    // Create Supabase client
+    // Initialize Supabase client
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false }
     });
+    log("Supabase client initialized");
     
-    // Verify user
-    logStep("Verifying user with token");
+    // Get user from token
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError) {
-      logStep(`ERROR: Authentication error: ${userError.message}`);
-      return new Response(JSON.stringify({ error: `Authentication error: ${userError.message}` }), {
+      log("ERROR: User authentication failed", { error: userError.message });
+      return new Response(JSON.stringify({ error: `Authentication failed: ${userError.message}` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
     
     if (!userData?.user) {
-      logStep("ERROR: User data not found");
+      log("ERROR: No user found");
       return new Response(JSON.stringify({ error: "User not found" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 404,
@@ -91,53 +87,49 @@ serve(async (req) => {
     }
     
     const user = userData.user;
-    if (!user?.email) {
-      logStep("ERROR: User email not available");
-      return new Response(JSON.stringify({ error: "User not authenticated or email not available" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-    
-    logStep("Creating checkout for user:", { email: user.email, userId: user.id });
+    log("User authenticated", { id: user.id, email: user.email });
     
     try {
-      // Initialize Stripe
-      const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
-      logStep("Stripe initialized successfully");
+      // Initialize Stripe with verbose error logging
+      log("Initializing Stripe with key", { keyLength: STRIPE_SECRET_KEY.length });
+      const stripe = new Stripe(STRIPE_SECRET_KEY, { 
+        apiVersion: "2023-10-16",
+        httpClient: Stripe.createFetchHttpClient()
+      });
       
-      // Check if user already has a Stripe customer ID
+      // Log successfully initialized Stripe
+      log("Stripe initialized successfully");
+      
+      // Check for existing customer
+      log("Checking for existing Stripe customer");
       const { data: subscribers, error: subscribersError } = await supabaseClient
         .from("subscribers")
         .select("stripe_customer_id")
         .eq("user_id", user.id)
-        .single();
-        
-      if (subscribersError && subscribersError.code !== "PGRST116") {
-        logStep(`ERROR: Error fetching subscriber: ${subscribersError.message}`);
-        return new Response(JSON.stringify({ error: `Error fetching subscriber: ${subscribersError.message}` }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        });
+        .maybeSingle();
+      
+      if (subscribersError) {
+        log("WARNING: Error fetching subscriber", { error: subscribersError.message });
+        // Continue anyway, we'll create or look up customer
       }
       
       let customerId: string | undefined;
       
       if (subscribers?.stripe_customer_id) {
         customerId = subscribers.stripe_customer_id;
-        logStep("Using existing Stripe customer:", { customerId });
+        log("Using existing customer ID", { customerId });
       } else {
-        // If no customer ID found, look up by email or create new customer
+        // Look for customer by email or create new
         try {
+          log("Looking up customer by email", { email: user.email });
           const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-          logStep("Stripe customer lookup successful");
           
           if (customers.data.length > 0) {
             customerId = customers.data[0].id;
-            logStep("Found Stripe customer by email:", { customerId });
+            log("Found customer by email", { customerId });
             
-            // Update the subscriber record with the customer ID
-            const { error: upsertError } = await supabaseClient
+            // Update database with customer ID
+            await supabaseClient
               .from("subscribers")
               .upsert({ 
                 user_id: user.id,
@@ -146,93 +138,91 @@ serve(async (req) => {
                 updated_at: new Date().toISOString()
               }, { onConflict: 'user_id' });
               
-            if (upsertError) {
-              logStep(`WARNING: Error updating subscriber: ${upsertError.message}`);
-              // Continue anyway, this is not critical
-            }
           } else {
-            // Create a new customer
-            logStep("Creating new Stripe customer");
-            try {
-              const newCustomer = await stripe.customers.create({
+            // Create new customer
+            log("Creating new customer");
+            const customer = await stripe.customers.create({
+              email: user.email,
+              name: user.user_metadata?.name || user.email,
+            });
+            
+            customerId = customer.id;
+            log("Created new customer", { customerId });
+            
+            // Save customer ID to database
+            await supabaseClient
+              .from("subscribers")
+              .upsert({ 
+                user_id: user.id,
                 email: user.email,
-                name: user.user_metadata?.name || user.email,
-              });
-              customerId = newCustomer.id;
-              logStep("Created new Stripe customer:", { customerId });
-              
-              // Insert new subscriber record
-              const { error: insertError } = await supabaseClient
-                .from("subscribers")
-                .upsert({ 
-                  user_id: user.id,
-                  email: user.email,
-                  stripe_customer_id: customerId,
-                  subscription_tier: "free",
-                  subscribed: false,
-                  updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
-                
-              if (insertError) {
-                logStep(`WARNING: Error inserting subscriber: ${insertError.message}`);
-                // Continue anyway, this is not critical
-              }
-            } catch (stripeError: any) {
-              logStep(`ERROR: Failed to create Stripe customer: ${stripeError.message}`);
-              return new Response(JSON.stringify({ error: `Failed to create Stripe customer: ${stripeError.message}` }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 500,
-              });
-            }
+                stripe_customer_id: customerId,
+                updated_at: new Date().toISOString()
+              }, { onConflict: 'user_id' });
           }
         } catch (stripeError: any) {
-          logStep(`ERROR: Failed to list Stripe customers: ${stripeError.message}`);
-          return new Response(JSON.stringify({ error: `Failed to list Stripe customers: ${stripeError.message}` }), {
+          log("ERROR: Customer lookup/creation failed", { 
+            error: stripeError.message,
+            type: stripeError.type,
+            code: stripeError.code
+          });
+          return new Response(JSON.stringify({ 
+            error: `Payment processing error: ${stripeError.message}` 
+          }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 500,
           });
         }
       }
       
-      // Create checkout session with the specific price ID
-      logStep("Creating checkout session with price ID:", { priceId: PRICE_ID });
+      // Create checkout session with the specified price
+      log("Creating checkout session", { priceId: PRICE_ID, customerId });
+      
       try {
+        const origin = req.headers.get("origin") || "http://localhost:5173";
+        log("Using origin for redirect", { origin });
+        
         const session = await stripe.checkout.sessions.create({
           customer: customerId,
-          line_items: [
-            {
-              price: PRICE_ID,
-              quantity: 1,
-            },
-          ],
+          line_items: [{ price: PRICE_ID, quantity: 1 }],
           mode: "subscription",
-          success_url: `${req.headers.get("origin")}/dashboard?success=true`,
-          cancel_url: `${req.headers.get("origin")}/dashboard?canceled=true`,
+          success_url: `${origin}/dashboard?success=true`,
+          cancel_url: `${origin}/dashboard?canceled=true`,
         });
         
-        logStep("Checkout session created successfully", { sessionId: session.id, url: session.url });
+        log("Checkout session created successfully", { 
+          sessionId: session.id,
+          url: session.url
+        });
         
         return new Response(JSON.stringify({ url: session.url }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
         });
       } catch (stripeError: any) {
-        logStep(`ERROR: Failed to create checkout session: ${stripeError.message}`);
-        return new Response(JSON.stringify({ error: `Failed to create checkout session: ${stripeError.message}` }), {
+        log("ERROR: Creating checkout session failed", { 
+          error: stripeError.message,
+          type: stripeError.type,
+          code: stripeError.code
+        });
+        return new Response(JSON.stringify({ 
+          error: `Failed to create checkout: ${stripeError.message}` 
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
         });
       }
-    } catch (stripeError: any) {
-      logStep(`ERROR: Stripe initialization error: ${stripeError.message}`);
-      return new Response(JSON.stringify({ error: `Stripe initialization error: ${stripeError.message}` }), {
+    } catch (stripeInitError: any) {
+      log("ERROR: Stripe initialization failed", { error: stripeInitError.message });
+      return new Response(JSON.stringify({ 
+        error: `Payment service error: ${stripeInitError.message}` 
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep(`ERROR: Unexpected error: ${errorMessage}`);
+    log("ERROR: Unhandled exception", { error: errorMessage });
     
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
