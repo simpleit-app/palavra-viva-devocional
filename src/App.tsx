@@ -16,6 +16,7 @@ import AchievementsPage from "./pages/AchievementsPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
+import AdminCreator from "./components/AdminCreator";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/admin-setup" element={<AdminCreator />} />
               
               {/* Protected routes */}
               <Route 
