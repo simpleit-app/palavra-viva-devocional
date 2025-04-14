@@ -10,8 +10,8 @@ const corsHeaders = {
 
 const SUPABASE_URL = "https://mcoeiucylazrjvhaemmc.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "sk_test_51RDoMPFMjb3SJCYouSPsQdL3jQ6zmMSwO46mBwP9uRElZlpMGUf43b7Wz92VvJmxWh7tfPnNQAsdftr75UtrunVr001aTJ6o8J";
-const PRICE_ID = "price_1RDoYDFMjb3SJCYocFbAuMHQ";
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "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";
+const PRICE_ID = "price_1RDogOFZLNoNkWEexA6EV70N";
 
 // Helper logging function
 const log = (message: string, data?: any) => {

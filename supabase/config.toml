@@ -36,3 +36,7 @@ verify_jwt = false
 
 [functions.customer-portal]
 verify_jwt = true
+
+# Add configuration for the create-admin function
+[functions.create-admin]
+verify_jwt = false
