@@ -11,6 +11,7 @@ import Testimonials from '@/components/landing/Testimonials';
 import CallToAction from '@/components/landing/CallToAction';
 import Footer from '@/components/landing/Footer';
 import { TestimonialType } from '@/components/landing/types';
+import { toast } from "sonner";
 
 const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -32,29 +33,32 @@ const LandingPage: React.FC = () => {
       setLoading(true);
       try {
         // Get active subscribers count (where subscribed = true)
-        const { count: subscribersCount, error: subscribersError } = await supabase
+        const { data: subscribersData, error: subscribersError } = await supabase
           .from('subscribers')
-          .select('*', { count: 'exact', head: true })
+          .select('*')
           .eq('subscribed', true);
         
         if (subscribersError) throw subscribersError;
-        setSubscribersCount(subscribersCount || 0);
+        console.log('Subscribers data:', subscribersData);
+        setSubscribersCount(subscribersData?.length || 0);
         
         // Get total reflections count
-        const { count: reflectionsCount, error: reflectionsError } = await supabase
+        const { data: reflectionsData, error: reflectionsError } = await supabase
           .from('reflections')
-          .select('*', { count: 'exact', head: true });
+          .select('*');
         
         if (reflectionsError) throw reflectionsError;
-        setReflectionsCount(reflectionsCount || 0);
+        console.log('Reflections data:', reflectionsData);
+        setReflectionsCount(reflectionsData?.length || 0);
         
         // Get total verses read count
-        const { count: versesReadCount, error: versesReadError } = await supabase
+        const { data: versesReadData, error: versesReadError } = await supabase
           .from('read_verses')
-          .select('*', { count: 'exact', head: true });
+          .select('*');
         
         if (versesReadError) throw versesReadError;
-        setVersesReadCount(versesReadCount || 0);
+        console.log('Verses read data:', versesReadData);
+        setVersesReadCount(versesReadData?.length || 0);
         
         // Get testimonials
         const { data: testimonialsData, error: testimonialsError } = await supabase
@@ -68,6 +72,7 @@ const LandingPage: React.FC = () => {
         
       } catch (error) {
         console.error('Error fetching stats:', error);
+        toast.error('Erro ao carregar estatísticas');
       } finally {
         setLoading(false);
       }
