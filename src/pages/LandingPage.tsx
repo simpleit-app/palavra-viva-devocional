@@ -31,7 +31,7 @@ const LandingPage: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        // Get active subscribers count
+        // Get active subscribers count (where subscribed = true)
         const { count: subscribersCount, error: subscribersError } = await supabase
           .from('subscribers')
           .select('*', { count: 'exact', head: true })
