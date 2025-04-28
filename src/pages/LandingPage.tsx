@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ const LandingPage: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
+        // Get active subscribers count
         const { count: subscribersCount, error: subscribersError } = await supabase
           .from('subscribers')
           .select('*', { count: 'exact', head: true })
@@ -74,6 +76,7 @@ const LandingPage: React.FC = () => {
         if (subscribersError) throw subscribersError;
         setSubscribersCount(subscribersCount || 0);
         
+        // Get total reflections count
         const { count: reflectionsCount, error: reflectionsError } = await supabase
           .from('reflections')
           .select('*', { count: 'exact', head: true });
@@ -81,6 +84,7 @@ const LandingPage: React.FC = () => {
         if (reflectionsError) throw reflectionsError;
         setReflectionsCount(reflectionsCount || 0);
         
+        // Get total verses read count
         const { count: versesReadCount, error: versesReadError } = await supabase
           .from('read_verses')
           .select('*', { count: 'exact', head: true });
@@ -88,6 +92,7 @@ const LandingPage: React.FC = () => {
         if (versesReadError) throw versesReadError;
         setVersesReadCount(versesReadCount || 0);
         
+        // Get testimonials
         const { data: testimonialsData, error: testimonialsError } = await supabase
           .from('testimonials')
           .select('*')
@@ -99,9 +104,6 @@ const LandingPage: React.FC = () => {
         
       } catch (error) {
         console.error('Error fetching stats:', error);
-        setSubscribersCount(523);
-        setReflectionsCount(10000);
-        setVersesReadCount(5000);
       } finally {
         setLoading(false);
       }
