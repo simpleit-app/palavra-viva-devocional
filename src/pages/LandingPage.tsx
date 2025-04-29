@@ -9,6 +9,7 @@ import { Check, X, BookOpen, PenLine, Trophy, Menu, X as Close } from 'lucide-re
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from "@/hooks/use-toast";
 
 const features = [
   {
@@ -69,42 +70,73 @@ const LandingPage: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const { count: subscribersCount, error: subscribersError } = await supabase
+        // Get active subscribers count
+        const { count: activeSubscribersCount, error: subscribersError } = await supabase
           .from('subscribers')
           .select('*', { count: 'exact', head: true })
           .eq('subscribed', true);
         
-        if (subscribersError) throw subscribersError;
-        setSubscribersCount(subscribersCount || 0);
+        if (subscribersError) {
+          console.error('Error fetching subscribers:', subscribersError);
+          throw subscribersError;
+        }
         
-        const { count: reflectionsCount, error: reflectionsError } = await supabase
+        setSubscribersCount(activeSubscribersCount || 0);
+        console.log('Active subscribers count:', activeSubscribersCount);
+        
+        // Get reflections count
+        const { count: totalReflectionsCount, error: reflectionsError } = await supabase
           .from('reflections')
           .select('*', { count: 'exact', head: true });
         
-        if (reflectionsError) throw reflectionsError;
-        setReflectionsCount(reflectionsCount || 0);
+        if (reflectionsError) {
+          console.error('Error fetching reflections:', reflectionsError);
+          throw reflectionsError;
+        }
         
-        const { count: versesReadCount, error: versesReadError } = await supabase
+        setReflectionsCount(totalReflectionsCount || 0);
+        console.log('Total reflections count:', totalReflectionsCount);
+        
+        // Get verses read count
+        const { count: totalVersesReadCount, error: versesReadError } = await supabase
           .from('read_verses')
           .select('*', { count: 'exact', head: true });
         
-        if (versesReadError) throw versesReadError;
-        setVersesReadCount(versesReadCount || 0);
+        if (versesReadError) {
+          console.error('Error fetching read verses:', versesReadError);
+          throw versesReadError;
+        }
         
+        setVersesReadCount(totalVersesReadCount || 0);
+        console.log('Total verses read count:', totalVersesReadCount);
+        
+        // Get testimonials data
         const { data: testimonialsData, error: testimonialsError } = await supabase
           .from('testimonials')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(3);
         
-        if (testimonialsError) throw testimonialsError;
+        if (testimonialsError) {
+          console.error('Error fetching testimonials:', testimonialsError);
+          throw testimonialsError;
+        }
+        
         setTestimonials(testimonialsData || []);
         
       } catch (error) {
         console.error('Error fetching stats:', error);
-        setSubscribersCount(523);
-        setReflectionsCount(10000);
-        setVersesReadCount(5000);
+        // Show error toast
+        toast({
+          title: "Erro ao carregar estatísticas",
+          description: "Não foi possível carregar os dados do dashboard.",
+          variant: "destructive"
+        });
+        
+        // Use fallback values
+        setSubscribersCount(0);
+        setReflectionsCount(0);
+        setVersesReadCount(0);
       } finally {
         setLoading(false);
       }
