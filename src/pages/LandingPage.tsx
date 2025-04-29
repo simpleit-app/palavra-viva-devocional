@@ -70,47 +70,25 @@ const LandingPage: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        // Get active subscribers count
-        const { count: activeSubscribersCount, error: subscribersError } = await supabase
-          .from('subscribers')
-          .select('*', { count: 'exact', head: true })
-          .eq('subscribed', true);
+        console.log('Fetching public statistics from edge function...');
         
-        if (subscribersError) {
-          console.error('Error fetching subscribers:', subscribersError);
-          throw subscribersError;
+        // Call the public-stats edge function to get statistics
+        const { data: statsData, error } = await supabase.functions.invoke('public-stats');
+        
+        if (error) {
+          console.error('Error calling public-stats function:', error);
+          throw error;
         }
         
-        setSubscribersCount(activeSubscribersCount || 0);
-        console.log('Active subscribers count:', activeSubscribersCount);
+        console.log('Statistics data received:', statsData);
         
-        // Get reflections count
-        const { count: totalReflectionsCount, error: reflectionsError } = await supabase
-          .from('reflections')
-          .select('*', { count: 'exact', head: true });
+        // Update state with the values from the edge function
+        setSubscribersCount(statsData.activeSubscribersCount || 0);
+        setReflectionsCount(statsData.reflectionsCount || 0);
+        setVersesReadCount(statsData.versesReadCount || 0);
         
-        if (reflectionsError) {
-          console.error('Error fetching reflections:', reflectionsError);
-          throw reflectionsError;
-        }
-        
-        setReflectionsCount(totalReflectionsCount || 0);
-        console.log('Total reflections count:', totalReflectionsCount);
-        
-        // Get verses read count
-        const { count: totalVersesReadCount, error: versesReadError } = await supabase
-          .from('read_verses')
-          .select('*', { count: 'exact', head: true });
-        
-        if (versesReadError) {
-          console.error('Error fetching read verses:', versesReadError);
-          throw versesReadError;
-        }
-        
-        setVersesReadCount(totalVersesReadCount || 0);
-        console.log('Total verses read count:', totalVersesReadCount);
-        
-        // Get testimonials data
+        // Fetch testimonials data
+        // We can directly query testimonials as they are likely to be public content
         const { data: testimonialsData, error: testimonialsError } = await supabase
           .from('testimonials')
           .select('*')
