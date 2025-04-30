@@ -11,8 +11,6 @@ const Index = () => {
   React.useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
-    } else {
-      navigate('/login');
     }
   }, [isAuthenticated, navigate]);
 
