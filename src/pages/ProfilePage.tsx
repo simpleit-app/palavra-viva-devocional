@@ -1,5 +1,4 @@
 
-// Modify the ProfilePage to include the UserTestimonial component
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <UserAvatar 
                   user={currentUser} 
-                  size="lg"
+                  size="lg" 
                   fallback={name.substring(0, 2)}
                 />
                 <div className="flex-1">
