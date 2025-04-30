@@ -68,7 +68,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <UserAvatar 
                   user={currentUser} 
-                  className="h-20 w-20"
+                  size="lg"
                   fallback={name.substring(0, 2)}
                 />
                 <div className="flex-1">
