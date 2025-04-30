@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     console.log('Fetching public statistics...')
 
     // Run database queries in parallel for better performance
-    const [subscribersResult, reflectionsResult, versesReadResult] = await Promise.all([
+    const [subscribersResult, reflectionsResult, versesReadResult, testimonialsResult] = await Promise.all([
       // Get active subscribers count (where subscribed = true)
       supabaseClient
         .from('subscribers')
@@ -37,7 +37,11 @@ Deno.serve(async (req) => {
       // Get total verses read count
       supabaseClient
         .from('read_verses')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true }),
+
+      // Get random approved testimonials
+      supabaseClient
+        .rpc('fetch_public_testimonials', { count_limit: 3 })
     ])
 
     // Check for errors in any of the queries
@@ -53,11 +57,16 @@ Deno.serve(async (req) => {
       throw new Error(`Error fetching read verses: ${versesReadResult.error.message}`)
     }
 
+    if (testimonialsResult.error) {
+      throw new Error(`Error fetching testimonials: ${testimonialsResult.error.message}`)
+    }
+
     // Collect and return the statistics data
     const stats = {
       activeSubscribersCount: subscribersResult.count || 0,
       reflectionsCount: reflectionsResult.count || 0,
-      versesReadCount: versesReadResult.count || 0
+      versesReadCount: versesReadResult.count || 0,
+      testimonials: testimonialsResult.data || []
     }
 
     console.log('Public statistics:', stats)

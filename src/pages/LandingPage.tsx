@@ -49,13 +49,20 @@ const planFeatures = {
   ]
 };
 
+interface Testimonial {
+  id: string;
+  quote: string;
+  author_name: string;
+  author_role: string | null;
+}
+
 const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [subscribersCount, setSubscribersCount] = useState<number>(0);
   const [reflectionsCount, setReflectionsCount] = useState<number>(0);
   const [versesReadCount, setVersesReadCount] = useState<number>(0);
-  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const isMobile = useIsMobile();
@@ -87,20 +94,13 @@ const LandingPage: React.FC = () => {
         setReflectionsCount(statsData.reflectionsCount || 0);
         setVersesReadCount(statsData.versesReadCount || 0);
         
-        // Fetch testimonials data
-        // We can directly query testimonials as they are likely to be public content
-        const { data: testimonialsData, error: testimonialsError } = await supabase
-          .from('testimonials')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(3);
-        
-        if (testimonialsError) {
-          console.error('Error fetching testimonials:', testimonialsError);
-          throw testimonialsError;
+        // Set testimonials from the edge function response
+        if (statsData.testimonials && Array.isArray(statsData.testimonials)) {
+          setTestimonials(statsData.testimonials);
+        } else {
+          console.log('No testimonials in response or invalid format');
+          setTestimonials([]);
         }
-        
-        setTestimonials(testimonialsData || []);
         
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -115,6 +115,7 @@ const LandingPage: React.FC = () => {
         setSubscribersCount(0);
         setReflectionsCount(0);
         setVersesReadCount(0);
+        setTestimonials([]);
       } finally {
         setLoading(false);
       }
@@ -386,18 +387,42 @@ const LandingPage: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-sm">
-                <svg className="w-12 h-12 text-primary mb-6" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 8v6H6v10h10V14h-4V8h-2zm14 0v6h-4v10h10V14h-4V8h-2z"/>
-                </svg>
-                <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-6">{testimonial.quote}</p>
-                <div>
-                  <p className="font-bold text-lg">{testimonial.author_name}</p>
-                  <p className="text-gray-500 dark:text-gray-400">{testimonial.author_role}</p>
+            {loading ? (
+              // Skeleton loading states for testimonials
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-sm">
+                  <Skeleton className="w-12 h-12 mb-6" />
+                  <Skeleton className="w-full h-24 mb-6" />
+                  <div>
+                    <Skeleton className="w-32 h-5 mb-2" />
+                    <Skeleton className="w-24 h-4" />
+                  </div>
                 </div>
+              ))
+            ) : testimonials.length > 0 ? (
+              // Actual testimonials
+              testimonials.map((testimonial) => (
+                <div key={testimonial.id} className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-sm">
+                  <svg className="w-12 h-12 text-primary mb-6" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 8v6H6v10h10V14h-4V8h-2zm14 0v6h-4v10h10V14h-4V8h-2z"/>
+                  </svg>
+                  <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-6">{testimonial.quote}</p>
+                  <div>
+                    <p className="font-bold text-lg">{testimonial.author_name}</p>
+                    {testimonial.author_role && (
+                      <p className="text-gray-500 dark:text-gray-400">{testimonial.author_role}</p>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Fallback when no testimonials are available
+              <div className="col-span-1 md:col-span-3 text-center p-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  Seja o primeiro a compartilhar sua experiência com o Palavra Viva!
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
