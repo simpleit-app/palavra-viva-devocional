@@ -172,67 +172,12 @@ export type Database = {
         }
         Relationships: []
       }
-      user_testimonials: {
-        Row: {
-          author_role: string | null
-          created_at: string | null
-          id: string
-          is_approved: boolean | null
-          quote: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          author_role?: string | null
-          created_at?: string | null
-          id?: string
-          is_approved?: boolean | null
-          quote: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          author_role?: string | null
-          created_at?: string | null
-          id?: string
-          is_approved?: boolean | null
-          quote?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_testimonials_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      fetch_public_testimonials: {
-        Args: { count_limit?: number }
-        Returns: {
-          id: string
-          quote: string
-          author_name: string
-          author_role: string
-        }[]
-      }
-      get_public_testimonials: {
-        Args: { count_limit: number }
-        Returns: {
-          id: string
-          quote: string
-          author_name: string
-          author_role: string
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

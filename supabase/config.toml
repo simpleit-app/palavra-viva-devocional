@@ -40,7 +40,3 @@ verify_jwt = true
 # Add configuration for the create-admin function
 [functions.create-admin]
 verify_jwt = false
-
-# Add configuration for the public-stats function
-[functions.public-stats]
-verify_jwt = false

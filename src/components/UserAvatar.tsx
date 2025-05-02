@@ -9,17 +9,13 @@ interface UserAvatarProps {
   showLevel?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   overrideUrl?: string | null;
-  className?: string;
-  fallback?: string;
 }
 
 const UserAvatar: React.FC<UserAvatarProps> = ({ 
   user, 
   showLevel = false,
   size = 'md',
-  overrideUrl = null,
-  className = '',
-  fallback
+  overrideUrl = null
 }) => {
   const sizeClasses = {
     sm: 'h-8 w-8',
@@ -28,7 +24,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     xl: 'h-24 w-24'
   };
 
-  const initials = fallback || user.name
+  const initials = user.name
     .split(' ')
     .map(n => n[0])
     .join('')
@@ -38,7 +34,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
     <div className="flex flex-col items-center">
       <div className="relative">
-        <Avatar className={`${sizeClasses[size]} ${className}`}>
+        <Avatar className={sizeClasses[size]}>
           <AvatarImage src={overrideUrl || user.photoURL} alt={user.name} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>

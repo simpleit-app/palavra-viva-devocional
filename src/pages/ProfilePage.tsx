@@ -1,324 +1,337 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Pencil, Check } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import UserTestimonial from '@/components/UserTestimonial';
+import { toast } from '@/components/ui/use-toast';
+import PageTitle from '@/components/PageTitle';
+import UserAvatar from '@/components/UserAvatar';
+import { Pencil, Upload, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 
 const ProfilePage: React.FC = () => {
-  const { currentUser, updateProfile } = useAuth();
+  const { currentUser, updateProfile, refreshSubscription, isPro } = useAuth();
   const [name, setName] = useState(currentUser?.name || '');
-  const [photoURL, setPhotoURL] = useState(currentUser?.photoURL || '');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      toast({
-        title: "Nome obrigatório",
-        description: "Por favor, informe seu nome.",
-        variant: "destructive"
-      });
-      return;
-    }
+  if (!currentUser) return null;
 
-    setIsLoading(true);
-    try {
-      await updateProfile({
-        name: name.trim(),
-        photoURL: photoURL.trim() || currentUser?.photoURL || null
-      });
-
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
-      });
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao atualizar o perfil. Tente novamente.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  return (
-    <div className="container max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Meu Perfil</h1>
-      <p className="text-muted-foreground mb-8">Visualize e edite suas informações pessoais.</p>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Nome obrigatório",
+        description: "Por favor, preencha seu nome.",
+      });
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      let photoURL = currentUser?.photoURL;
+      
+      // Upload new avatar if selected
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${currentUser?.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        // First, delete existing files in the user's avatar folder
+        const { data: existingFiles, error: listError } = await supabase.storage
+          .from('avatars')
+          .list(currentUser?.id || '');
+        
+        if (listError) {
+          console.error('Error listing existing files:', listError);
+        } else if (existingFiles && existingFiles.length > 0) {
+          const filesToDelete = existingFiles.map(file => `${currentUser?.id}/${file.name}`);
+          const { error: deleteError } = await supabase.storage
+            .from('avatars')
+            .remove(filesToDelete);
+          
+          if (deleteError) {
+            console.error('Error deleting existing files:', deleteError);
+          }
+        }
+        
+        // Upload the new file
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, avatarFile, {
+            upsert: true,
+            contentType: avatarFile.type
+          });
+        
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw uploadError;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        photoURL = publicUrl;
+      }
+      
+      // Update profile
+      await updateProfile({
+        name,
+        photoURL,
+      });
+      
+      await refreshSubscription();
+      
+      toast({
+        title: 'Perfil atualizado',
+        description: 'Suas informações foram atualizadas com sucesso.',
+      });
+      
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Não foi possível atualizar o perfil. Tente novamente.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Informações Pessoais */}
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric'
+    });
+  };
+
+  return (
+    <div className="container max-w-4xl py-6 px-4 md:px-6">
+      <PageTitle 
+        title="Meu Perfil"
+        subtitle="Visualize e edite suas informações pessoais."
+      />
+      
+      <div className="grid gap-6 md:grid-cols-2 mt-6">
         <Card>
           <CardHeader>
             <CardTitle>Informações Pessoais</CardTitle>
-            <p className="text-sm text-muted-foreground">Ajuste suas informações de perfil</p>
+            <CardDescription>
+              Atualize suas informações de perfil
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center mb-6">
-              <div className="mb-2 relative">
-                <img
-                  src={currentUser?.photoURL || '/lovable-uploads/0f2a88ed-40b8-41c7-bf7c-9f546bcb210b.png'}
-                  alt="Avatar"
-                  className="rounded-full w-32 h-32 object-cover border-2 border-border"
-                />
-                <p className="text-xs text-center mt-2 text-muted-foreground">
-                  Clique na imagem para alterar seu avatar
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <Label htmlFor="name">Nome</Label>
-                  {!isEditing && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setIsEditing(true)}
-                      className="h-8 px-2"
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                  )}
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/20">
+                    <UserAvatar 
+                      user={currentUser} 
+                      overrideUrl={avatarPreview} 
+                      showLevel={false} 
+                      size="xl" 
+                    />
+                  </div>
+                  <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white cursor-pointer rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Upload className="w-6 h-6" />
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                 </div>
-                {isEditing ? (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Clique na imagem para alterar seu avatar
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <div className="relative">
                   <Input
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mb-2"
                   />
-                ) : (
-                  <p className="text-sm py-2 px-3 bg-muted rounded-md">{currentUser?.name}</p>
-                )}
+                  <Pencil className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
-
-              <div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <p className="text-sm py-2 px-3 bg-muted rounded-md">{currentUser?.email}</p>
+                <Input
+                  id="email"
+                  value={currentUser.email}
+                  disabled
+                  className="bg-muted/50"
+                />
               </div>
-
-              {isEditing && (
-                <div>
-                  <Label htmlFor="photo">URL da foto (opcional)</Label>
-                  <Input
-                    id="photo"
-                    value={photoURL}
-                    onChange={(e) => setPhotoURL(e.target.value)}
-                    placeholder="https://exemplo.com/sua-foto.jpg"
-                  />
-                </div>
-              )}
-
-              {isEditing && (
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setIsEditing(false);
-                      setName(currentUser?.name || '');
-                      setPhotoURL(currentUser?.photoURL || '');
-                    }}
-                    disabled={isLoading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={handleSave}
-                    disabled={isLoading}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Salvar Alterações
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Estatísticas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Estatísticas</CardTitle>
-            <p className="text-sm text-muted-foreground">Seu progresso na jornada bíblica</p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-muted/40 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Textos Lidos</p>
-                <p className="text-3xl font-bold">{currentUser?.chaptersRead || 2}</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Reflexões</p>
-                <p className="text-3xl font-bold">{currentUser?.totalReflections || 3}</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Nível</p>
-                <p className="text-3xl font-bold">{currentUser?.level || 1}</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Dias Consecutivos</p>
-                <p className="text-3xl font-bold">{currentUser?.consecutiveDays || 0}</p>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              Membro desde: {currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('pt-BR') : '14 de abril de 2025'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Plano Atual */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Plano Atual</CardTitle>
-            <p className="text-sm text-muted-foreground">Informações da sua assinatura</p>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium text-lg">
-                  {currentUser?.subscriptionTier === 'pro' ? 'Plano Pro' : 'Plano Gratuito'}
-                </h3>
-                {currentUser?.subscriptionTier === 'pro' && currentUser?.subscriptionEnd && (
-                  <p className="text-sm text-muted-foreground">
-                    Válido até {new Date(currentUser.subscriptionEnd).toLocaleDateString('pt-BR')}
-                  </p>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Atualizando...
+                  </>
+                ) : (
+                  'Salvar Alterações'
                 )}
-              </div>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                currentUser?.subscriptionTier === 'pro' 
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' 
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-              }`}>
-                {currentUser?.subscriptionTier === 'pro' ? 'Ativo' : 'Limitado'}
-              </span>
-            </div>
-
-            {currentUser?.subscriptionTier !== 'pro' && (
-              <>
-                <div className="mt-4">
-                  <p className="text-sm mb-2">Possui um cupom?</p>
-                  <div className="flex space-x-2">
-                    <Input placeholder="Digite o código do cupom" className="max-w-xs" />
-                    <Button variant="outline">Aplicar</Button>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => toast({ 
-                    title: "Atualizar para Pro",
-                    description: "Funcionalidade em desenvolvimento"
-                  })}>
-                    Atualizar para o Plano Pro
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
+              </Button>
+            </CardFooter>
+          </form>
         </Card>
         
-        {/* User Testimonial */}
-        <UserTestimonial />
-      </div>
-
-      {/* Planos Disponíveis */}
-      {currentUser?.subscriptionTier !== 'pro' && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">Planos Disponíveis</h2>
-          <p className="text-muted-foreground mb-6">
-            Escolha o plano que melhor se adapta às suas necessidades
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Plano Gratuito */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold">Plano Gratuito</h3>
-                    <p className="text-sm text-muted-foreground">Acesso limitado</p>
-                  </div>
-                  <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">Seu Plano</span>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Estatísticas</CardTitle>
+              <CardDescription>
+                Seu progresso na jornada bíblica
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Textos Lidos</p>
+                  <p className="text-2xl font-semibold">{currentUser.chaptersRead}</p>
                 </div>
-
-                <ul className="space-y-2 mb-6">
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span>Acesso a 2 textos bíblicos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span>Limite de 2 reflexões</span>
-                  </li>
-                  <li className="flex items-start opacity-50">
-                    <span className="mr-2 flex-shrink-0">✕</span>
-                    <span>Sem acesso às Conquistas</span>
-                  </li>
-                </ul>
-
-                <p className="font-bold text-lg mb-4 text-center">Gratuito</p>
-              </CardContent>
-            </Card>
-
-            {/* Plano Pro */}
-            <Card className="border-primary">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-1">Plano Pro</h3>
-                <p className="text-sm text-muted-foreground mb-4">Desbloqueie todos os recursos</p>
-
-                <ul className="space-y-2 mb-6">
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span>Acesso ilimitado a todos os textos bíblicos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span>Reflexões ilimitadas</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span>Acesso ao menu de Conquistas</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span>Recursos futuros exclusivos</span>
-                  </li>
-                </ul>
-
-                <div className="mb-4 text-center">
-                  <p className="text-2xl font-bold">R$19,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Reflexões</p>
+                  <p className="text-2xl font-semibold">{currentUser.totalReflections}</p>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm mb-2">Possui um cupom?</p>
-                    <Input placeholder="Digite o código do cupom" />
-                  </div>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => toast({ 
-                    title: "Assinar agora",
-                    description: "Funcionalidade em desenvolvimento"
-                  })}>
-                    Assinar agora
-                  </Button>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Nível</p>
+                  <p className="text-2xl font-semibold">{currentUser.level}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Dias Consecutivos</p>
+                  <p className="text-2xl font-semibold">{currentUser.consecutiveDays}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Membro desde {formatDate(currentUser.createdAt)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className={isPro ? "border-primary/40 bg-primary/5" : ""}>
+            <CardHeader>
+              <CardTitle>Plano Atual</CardTitle>
+              <CardDescription>
+                Informações da sua assinatura
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <p className="font-semibold text-xl">
+                    {isPro ? 'Plano Pro' : 'Plano Gratuito'}
+                  </p>
+                  {isPro && currentUser.subscriptionEnd && (
+                    <p className="text-sm text-muted-foreground">
+                      Expira em {formatDate(currentUser.subscriptionEnd)}
+                    </p>
+                  )}
+                </div>
+                {isPro ? (
+                  <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                    Ativo
+                  </span>
+                ) : (
+                  <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Limitado
+                  </span>
+                )}
+              </div>
+              
+              {!isPro && (
+                <div className="mt-4">
+                  <SubscriptionUpgrade variant="inline" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
+      
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Planos Disponíveis</CardTitle>
+            <CardDescription>
+              Escolha o plano que melhor se adapta às suas necessidades
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className={!isPro ? "border-primary/40 bg-primary/5" : ""}>
+                <CardHeader>
+                  <div className="flex justify-between">
+                    <CardTitle>Plano Gratuito</CardTitle>
+                    {!isPro && <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">Seu Plano</span>}
+                  </div>
+                  <CardDescription>Acesso limitado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 my-4">
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Acesso a 2 textos bíblicos</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Limite de 2 reflexões</span>
+                    </li>
+                    <li className="flex items-start text-muted-foreground">
+                      <span className="mr-2">✗</span>
+                      <span>Sem acesso às Conquistas</span>
+                    </li>
+                  </ul>
+                  <p className="font-semibold text-center">Gratuito</p>
+                </CardContent>
+              </Card>
+              
+              <SubscriptionUpgrade variant="card" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
