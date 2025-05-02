@@ -15,13 +15,14 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL") ?? "",
     // Supabase API ANON KEY - env var exported by default.
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    // Important: we use the SERVICE_ROLE_KEY to bypass RLS policies
     { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
   );
 
   try {
     console.log("Fetching public statistics...");
     
-    // Get active subscribers count
+    // Get active subscribers count - subscribers with subscribed=true
     const { count: subscribersCount, error: subscribersError } = await supabaseClient
       .from('subscribers')
       .select('*', { count: 'exact', head: true })
