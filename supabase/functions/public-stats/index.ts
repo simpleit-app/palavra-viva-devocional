@@ -1,88 +1,87 @@
 
-// Follow this setup guide to integrate the Deno runtime into your application:
-// https://deno.com/manual/getting_started/javascript_runtime
-// Learn more about Deno: https://deno.com/runtime
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
-
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
   }
 
+  // Create a Supabase client with the Auth context of the logged in user
+  const supabaseClient = createClient(
+    // Supabase API URL - env var exported by default.
+    Deno.env.get("SUPABASE_URL") ?? "",
+    // Supabase API ANON KEY - env var exported by default.
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+  );
+
   try {
-    // Use Supabase service role key to bypass RLS policies
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    console.log('Fetching public statistics...')
-
-    // Run database queries in parallel for better performance
-    const [subscribersResult, reflectionsResult, versesReadResult] = await Promise.all([
-      // Get active subscribers count (where subscribed = true)
-      supabaseClient
-        .from('subscribers')
-        .select('*', { count: 'exact', head: true })
-        .eq('subscribed', true),
-      
-      // Get total reflections count
-      supabaseClient
-        .from('reflections')
-        .select('*', { count: 'exact', head: true }),
-      
-      // Get total verses read count
-      supabaseClient
-        .from('read_verses')
-        .select('*', { count: 'exact', head: true })
-    ])
-
-    // Check for errors in any of the queries
-    if (subscribersResult.error) {
-      throw new Error(`Error fetching subscribers: ${subscribersResult.error.message}`)
+    console.log("Fetching public statistics...");
+    
+    // Get active subscribers count
+    const { count: subscribersCount, error: subscribersError } = await supabaseClient
+      .from('subscribers')
+      .select('*', { count: 'exact', head: true })
+      .eq('subscribed', true);
+    
+    if (subscribersError) {
+      throw subscribersError;
     }
     
-    if (reflectionsResult.error) {
-      throw new Error(`Error fetching reflections: ${reflectionsResult.error.message}`)
+    // Get total reflections count
+    const { count: reflectionsCount, error: reflectionsError } = await supabaseClient
+      .from('reflections')
+      .select('*', { count: 'exact', head: true });
+    
+    if (reflectionsError) {
+      throw reflectionsError;
     }
     
-    if (versesReadResult.error) {
-      throw new Error(`Error fetching read verses: ${versesReadResult.error.message}`)
+    // Get total read verses count
+    const { count: versesReadCount, error: versesReadError } = await supabaseClient
+      .from('read_verses')
+      .select('*', { count: 'exact', head: true });
+    
+    if (versesReadError) {
+      throw versesReadError;
     }
-
-    // Collect and return the statistics data
-    const stats = {
-      activeSubscribersCount: subscribersResult.count || 0,
-      reflectionsCount: reflectionsResult.count || 0,
-      versesReadCount: versesReadResult.count || 0
+    
+    // Get random testimonials
+    const { data: testimonials, error: testimonialsError } = await supabaseClient
+      .rpc('fetch_public_testimonials', { count_limit: 3 });
+    
+    if (testimonialsError) {
+      throw testimonialsError;
     }
-
-    console.log('Public statistics:', stats)
-
+    
+    const responseData = {
+      activeSubscribersCount: subscribersCount || 0,
+      reflectionsCount: reflectionsCount || 0,
+      versesReadCount: versesReadCount || 0,
+      testimonials: testimonials || []
+    };
+    
+    console.log("Public statistics:", responseData);
+    
     return new Response(
-      JSON.stringify(stats),
+      JSON.stringify(responseData),
       { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200
       }
-    )
+    );
   } catch (error) {
-    console.error('Error in public-stats function:', error.message)
+    console.error("Error fetching public statistics:", error);
     
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500
       }
-    )
+    );
   }
-})
+});

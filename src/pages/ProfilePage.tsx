@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import PageTitle from '@/components/PageTitle';
 import UserAvatar from '@/components/UserAvatar';
 import { Pencil, Upload, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
+import UserTestimonial from '@/components/UserTestimonial';
 
 const ProfilePage: React.FC = () => {
   const { currentUser, updateProfile, refreshSubscription, isPro } = useAuth();
@@ -290,7 +291,9 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
       
-      <div className="mt-6">
+      <div className="mt-6 space-y-6">
+        <UserTestimonial />
+        
         <Card>
           <CardHeader>
             <CardTitle>Planos Disponíveis</CardTitle>
