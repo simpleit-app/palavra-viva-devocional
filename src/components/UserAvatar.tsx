@@ -1,55 +1,73 @@
 
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User } from '@/contexts/AuthContext';
-import { getLevelTitle } from '@/utils/achievementUtils';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface UserAvatarProps {
   user: User;
+  size?: 'sm' | 'md' | 'lg';
   showLevel?: boolean;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  overrideUrl?: string | null;
+  showNickname?: boolean;
+  className?: string;
 }
 
 const UserAvatar: React.FC<UserAvatarProps> = ({ 
   user, 
+  size = 'md', 
   showLevel = false,
-  size = 'md',
-  overrideUrl = null
+  showNickname = false,
+  className = '' 
 }) => {
-  const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10',
-    lg: 'h-16 w-16',
-    xl: 'h-24 w-24'
+  const getSize = () => {
+    switch (size) {
+      case 'sm': return 'h-8 w-8';
+      case 'lg': return 'h-20 w-20';
+      case 'md':
+      default: return 'h-12 w-12';
+    }
   };
 
-  const initials = user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <Avatar className={sizeClasses[size]}>
-          <AvatarImage src={overrideUrl || user.photoURL} alt={user.name} />
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        
-        {showLevel && (
-          <div className="absolute -bottom-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border-2 border-background">
-            {user.level}
-          </div>
-        )}
-      </div>
+    <div className={`relative flex flex-col items-center ${className}`}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Avatar className={`${getSize()} border-2 border-primary/10`}>
+                <AvatarImage src={user.photoURL} alt={user.name} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+              
+              {showLevel && (
+                <Badge variant="secondary" className="absolute -bottom-2 -right-2 px-1.5 py-0.5 text-xs">
+                  {`N${user.level}`}
+                </Badge>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{user.name}</p>
+            <p className="text-xs text-muted-foreground">Nickname: {user.nickname}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
-      {showLevel && (
-        <div className="mt-2 text-xs text-center">
-          <span className="text-slate-500 dark:text-slate-400">Nível {user.level}</span>
-          <p className="font-medium text-slate-700 dark:text-slate-300">{getLevelTitle(user.level)}</p>
+      {showNickname && (
+        <div className="mt-2 text-center">
+          <p className="font-medium text-sm">{user.nickname}</p>
         </div>
       )}
     </div>
