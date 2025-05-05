@@ -121,6 +121,12 @@ const LandingPage: React.FC = () => {
     fetchStats();
   }, []);
 
+  // Fix navigation handling to ensure login page loads
+  const handleNavigation = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800">
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b">
@@ -194,10 +200,10 @@ const LandingPage: React.FC = () => {
                 Depoimentos
               </a>
               <div className="flex flex-col gap-3 pt-2">
-                <Button asChild variant="outline" className="w-full">
+                <Button asChild variant="outline" className="w-full" onClick={() => setMobileMenuOpen(false)}>
                   <Link to="/login">Entrar</Link>
                 </Button>
-                <Button asChild className="w-full">
+                <Button asChild className="w-full" onClick={() => setMobileMenuOpen(false)}>
                   <Link to="/login">Começar Grátis</Link>
                 </Button>
               </div>
@@ -206,6 +212,7 @@ const LandingPage: React.FC = () => {
         )}
       </header>
 
+      {/* Hero section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
