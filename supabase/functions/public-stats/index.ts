@@ -9,14 +9,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Create a Supabase client with the Auth context of the logged in user
+  // Create a Supabase client with the Service Role Key to bypass RLS
   const supabaseClient = createClient(
     // Supabase API URL - env var exported by default.
     Deno.env.get("SUPABASE_URL") ?? "",
-    // Supabase API ANON KEY - env var exported by default.
+    // Supabase API SERVICE ROLE KEY - env var exported by default.
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    // Important: we use the SERVICE_ROLE_KEY to bypass RLS policies
-    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+    // DO NOT include the Authorization header here - we're using the SERVICE_ROLE_KEY directly
+    {}
   );
 
   try {
