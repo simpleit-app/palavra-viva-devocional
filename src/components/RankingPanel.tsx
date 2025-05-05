@@ -28,9 +28,10 @@ const RankingPanel = ({ maxRanks = 10, showCaption = true, className = '', compa
   useEffect(() => {
     const fetchRankings = async () => {
       try {
+        // Using the user_rankings view created in our SQL migration
         const { data, error } = await supabase
           .from('user_rankings')
-          .select('*')
+          .select('nickname, points, level, rank')
           .limit(maxRanks);
 
         if (error) {
@@ -38,7 +39,8 @@ const RankingPanel = ({ maxRanks = 10, showCaption = true, className = '', compa
           return;
         }
 
-        setRankings(data || []);
+        // The data from user_rankings already matches our UserRanking type
+        setRankings(data as UserRanking[] || []);
       } catch (err) {
         console.error('Exception fetching rankings:', err);
       } finally {
