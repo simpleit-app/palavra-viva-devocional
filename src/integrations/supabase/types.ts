@@ -9,6 +9,21 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      biblical_names: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           chapters_read: number
@@ -19,7 +34,9 @@ export type Database = {
           last_access: string
           level: number
           name: string
+          nickname: string | null
           photo_url: string | null
+          points: number | null
           total_reflections: number
         }
         Insert: {
@@ -31,7 +48,9 @@ export type Database = {
           last_access?: string
           level?: number
           name: string
+          nickname?: string | null
           photo_url?: string | null
+          points?: number | null
           total_reflections?: number
         }
         Update: {
@@ -43,7 +62,9 @@ export type Database = {
           last_access?: string
           level?: number
           name?: string
+          nickname?: string | null
           photo_url?: string | null
+          points?: number | null
           total_reflections?: number
         }
         Relationships: []
@@ -212,7 +233,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_rankings: {
+        Row: {
+          level: number | null
+          nickname: string | null
+          points: number | null
+          rank: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       fetch_public_testimonials: {
@@ -223,6 +252,10 @@ export type Database = {
           author_name: string
           author_role: string
         }[]
+      }
+      generate_unique_biblical_nickname: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_public_testimonials: {
         Args: { count_limit: number }
