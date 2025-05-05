@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from "@/hooks/use-toast";
-import RankingPanel from '@/components/RankingPanel';
 
 const features = [
   {
@@ -259,33 +258,6 @@ const LandingPage: React.FC = () => {
                 <p className="text-5xl font-bold text-primary">{versesReadCount}+</p>
               )}
               <p className="text-gray-600 dark:text-gray-300">Versículos lidos</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Ranking Section */}
-      <section className="py-16 px-4 bg-gray-50 dark:bg-slate-800/30">
-        <div className="container mx-auto">
-          <div className="text-center mb-10">
-            <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
-              Comunidade
-            </Badge>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-              Nossos Estudantes em Destaque
-            </h2>
-            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Confira os estudantes mais dedicados da nossa comunidade e junte-se a eles na jornada de estudo bíblico.
-            </p>
-          </div>
-          
-          <div className="max-w-4xl mx-auto">
-            <RankingPanel maxRanks={5} />
-            
-            <div className="mt-6 text-center">
-              <Button variant="outline" asChild className="mt-4">
-                <Link to="/login">Ver Ranking Completo</Link>
-              </Button>
             </div>
           </div>
         </div>

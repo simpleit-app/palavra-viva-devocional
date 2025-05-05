@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -15,8 +16,6 @@ export type User = {
   createdAt: Date;
   subscriptionTier: string;
   subscriptionEnd: Date | null;
-  nickname: string;
-  points: number;
 };
 
 // Define the AuthContextType
@@ -66,8 +65,6 @@ const formatUser = (user: SupabaseUser | null, profileData: any, subscriptionDat
     createdAt: new Date(profileData.created_at),
     subscriptionTier: subscriptionData?.subscription_tier || 'free',
     subscriptionEnd: subscriptionData?.subscription_end ? new Date(subscriptionData.subscription_end) : null,
-    nickname: profileData.nickname || 'Anônimo',
-    points: profileData.points || 0,
   };
 };
 

@@ -1,255 +1,340 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
+import PageTitle from '@/components/PageTitle';
 import UserAvatar from '@/components/UserAvatar';
-import { getLevelTitle } from '@/utils/achievementUtils';
-import RankingPanel from '@/components/RankingPanel';
+import { Pencil, Upload, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
+import UserTestimonial from '@/components/UserTestimonial';
 
 const ProfilePage: React.FC = () => {
-  const { currentUser, updateProfile } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const { currentUser, updateProfile, refreshSubscription, isPro } = useAuth();
+  const [name, setName] = useState(currentUser?.name || '');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!currentUser) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
       
-      // Check file type
-      if (!file.type.match('image.*')) {
-        toast({
-          title: "Tipo de arquivo inválido",
-          description: "Por favor, selecione uma imagem.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Check file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "O tamanho máximo permitido é 2MB.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      setSelectedFile(file);
-      
-      // Create preview
+      // Create a preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
+        setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const uploadAvatar = async () => {
-    if (!selectedFile || !currentUser) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setIsLoading(true);
+    if (!name.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Nome obrigatório",
+        description: "Por favor, preencha seu nome.",
+      });
+      return;
+    }
     
     try {
-      // Create a unique file path
-      const fileExt = selectedFile.name.split('.').pop();
-      const filePath = `${currentUser.id}/avatar.${fileExt}`;
+      setLoading(true);
       
-      // Upload to Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, selectedFile, { upsert: true });
+      let photoURL = currentUser?.photoURL;
       
-      if (uploadError) {
-        throw uploadError;
+      // Upload new avatar if selected
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${currentUser?.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        // First, delete existing files in the user's avatar folder
+        const { data: existingFiles, error: listError } = await supabase.storage
+          .from('avatars')
+          .list(currentUser?.id || '');
+        
+        if (listError) {
+          console.error('Error listing existing files:', listError);
+        } else if (existingFiles && existingFiles.length > 0) {
+          const filesToDelete = existingFiles.map(file => `${currentUser?.id}/${file.name}`);
+          const { error: deleteError } = await supabase.storage
+            .from('avatars')
+            .remove(filesToDelete);
+          
+          if (deleteError) {
+            console.error('Error deleting existing files:', deleteError);
+          }
+        }
+        
+        // Upload the new file
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, avatarFile, {
+            upsert: true,
+            contentType: avatarFile.type
+          });
+        
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw uploadError;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        photoURL = publicUrl;
       }
       
-      // Get public URL
-      const { data } = supabase
-        .storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      
-      // Update user profile
+      // Update profile
       await updateProfile({
-        photoURL: data.publicUrl
+        name,
+        photoURL,
       });
       
+      await refreshSubscription();
+      
       toast({
-        title: "Avatar atualizado",
-        description: "Sua foto de perfil foi atualizada com sucesso.",
+        title: 'Perfil atualizado',
+        description: 'Suas informações foram atualizadas com sucesso.',
       });
       
-      // Reset selection
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
       toast({
-        title: "Erro ao atualizar avatar",
-        description: "Não foi possível atualizar sua foto de perfil.",
-        variant: "destructive"
+        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Não foi possível atualizar o perfil. Tente novamente.',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric'
+    });
   };
 
   return (
     <div className="container max-w-4xl py-6 px-4 md:px-6">
-      <h1 className="text-3xl font-bold mb-2">Meu Perfil</h1>
-      <p className="text-muted-foreground mb-6">Gerencie suas informações pessoais e preferências</p>
+      <PageTitle 
+        title="Meu Perfil"
+        subtitle="Visualize e edite suas informações pessoais."
+      />
       
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="ranking">Ranking</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-6 md:grid-cols-2 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Pessoais</CardTitle>
+            <CardDescription>
+              Atualize suas informações de perfil
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/20">
+                    <UserAvatar 
+                      user={currentUser} 
+                      overrideUrl={avatarPreview} 
+                      showLevel={false} 
+                      size="xl" 
+                    />
+                  </div>
+                  <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white cursor-pointer rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Upload className="w-6 h-6" />
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Clique na imagem para alterar seu avatar
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <Pencil className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={currentUser.email}
+                  disabled
+                  className="bg-muted/50"
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Atualizando...
+                  </>
+                ) : (
+                  'Salvar Alterações'
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
         
-        <TabsContent value="profile" className="space-y-6">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
+              <CardTitle>Estatísticas</CardTitle>
+              <CardDescription>
+                Seu progresso na jornada bíblica
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex flex-col items-center gap-3">
-                  <UserAvatar 
-                    user={currentUser} 
-                    size="lg" 
-                    showLevel={true}
-                  />
-                  
-                  <div className="text-center mt-1">
-                    <p className="text-sm font-medium">Nickname:</p>
-                    <Badge variant="secondary" className="mt-1">
-                      {currentUser.nickname}
-                    </Badge>
-                  </div>
-                  
-                  <div className="mt-2">
-                    <input
-                      type="file"
-                      id="avatar"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                    />
-                    <label htmlFor="avatar">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="cursor-pointer" 
-                        asChild
-                      >
-                        <span>Alterar Foto</span>
-                      </Button>
-                    </label>
-                  </div>
-                  
-                  {previewUrl && (
-                    <div className="mt-2 text-center">
-                      <div className="relative w-20 h-20 mx-auto overflow-hidden rounded-full border-2 border-primary/10">
-                        <img 
-                          src={previewUrl} 
-                          alt="Preview" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="mt-2 flex gap-2 justify-center">
-                        <Button 
-                          size="sm" 
-                          onClick={uploadAvatar} 
-                          disabled={isLoading}
-                        >
-                          {isLoading ? "Salvando..." : "Salvar"}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => {
-                            setSelectedFile(null);
-                            setPreviewUrl(null);
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Textos Lidos</p>
+                  <p className="text-2xl font-semibold">{currentUser.chaptersRead}</p>
                 </div>
-                
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Nome</label>
-                    <p className="mt-1">{currentUser.name}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Email</label>
-                    <p className="mt-1">{currentUser.email}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Nível</label>
-                    <p className="mt-1">
-                      Nível {currentUser.level}: {getLevelTitle(currentUser.level)}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Pontos</label>
-                    <p className="mt-1">{currentUser.points || 0} pontos</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Capítulos Lidos</label>
-                    <p className="mt-1">{currentUser.chaptersRead}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Reflexões</label>
-                    <p className="mt-1">{currentUser.totalReflections}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Membro desde</label>
-                    <p className="mt-1">
-                      {new Date(currentUser.createdAt).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Reflexões</p>
+                  <p className="text-2xl font-semibold">{currentUser.totalReflections}</p>
                 </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Nível</p>
+                  <p className="text-2xl font-semibold">{currentUser.level}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Dias Consecutivos</p>
+                  <p className="text-2xl font-semibold">{currentUser.consecutiveDays}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Membro desde {formatDate(currentUser.createdAt)}
+                </p>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className={isPro ? "border-primary/40 bg-primary/5" : ""}>
             <CardHeader>
-              <CardTitle>Preferências de Notificação</CardTitle>
+              <CardTitle>Plano Atual</CardTitle>
+              <CardDescription>
+                Informações da sua assinatura
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                As preferências de notificação serão implementadas em breve.
-              </p>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <p className="font-semibold text-xl">
+                    {isPro ? 'Plano Pro' : 'Plano Gratuito'}
+                  </p>
+                  {isPro && currentUser.subscriptionEnd && (
+                    <p className="text-sm text-muted-foreground">
+                      Expira em {formatDate(currentUser.subscriptionEnd)}
+                    </p>
+                  )}
+                </div>
+                {isPro ? (
+                  <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                    Ativo
+                  </span>
+                ) : (
+                  <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Limitado
+                  </span>
+                )}
+              </div>
+              
+              {!isPro && (
+                <div className="mt-4">
+                  <SubscriptionUpgrade variant="inline" />
+                </div>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      </div>
+      
+      <div className="mt-6 space-y-6">
+        <UserTestimonial />
         
-        <TabsContent value="ranking">
-          <RankingPanel />
-        </TabsContent>
-      </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle>Planos Disponíveis</CardTitle>
+            <CardDescription>
+              Escolha o plano que melhor se adapta às suas necessidades
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className={!isPro ? "border-primary/40 bg-primary/5" : ""}>
+                <CardHeader>
+                  <div className="flex justify-between">
+                    <CardTitle>Plano Gratuito</CardTitle>
+                    {!isPro && <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">Seu Plano</span>}
+                  </div>
+                  <CardDescription>Acesso limitado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 my-4">
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Acesso a 2 textos bíblicos</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Limite de 2 reflexões</span>
+                    </li>
+                    <li className="flex items-start text-muted-foreground">
+                      <span className="mr-2">✗</span>
+                      <span>Sem acesso às Conquistas</span>
+                    </li>
+                  </ul>
+                  <p className="font-semibold text-center">Gratuito</p>
+                </CardContent>
+              </Card>
+              
+              <SubscriptionUpgrade variant="card" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
