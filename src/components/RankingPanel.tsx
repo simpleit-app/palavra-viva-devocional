@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import UserAvatar from './UserAvatar';
 import { Trophy } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Define proper interface for UserRanking to match the database view
 export interface UserRanking {
@@ -37,7 +37,7 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabase.auth.getSession()}`
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
             },
             body: JSON.stringify({ limit_count: limit })
           }
@@ -78,8 +78,19 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
       </CardHeader>
       <CardContent className="p-4">
         {loading ? (
-          <div className="flex justify-center p-4">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-7 rounded-full" />
+                  <div>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="mt-1 h-3 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-4">
