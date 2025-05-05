@@ -28,20 +28,36 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        // Call a Supabase function to get the rankings
-        const { data, error } = await supabase
-          .rpc('fetch_user_rankings', { limit_count: limit });
-
-        if (error) {
-          console.error('Error fetching rankings:', error);
-          return;
+        setLoading(true);
+        
+        // Call the Supabase Edge Function directly
+        const response = await fetch(
+          'https://mcoeiucylazrjvhaemmc.supabase.co/functions/v1/fetch_user_rankings',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabase.auth.getSession()}`
+            },
+            body: JSON.stringify({ limit_count: limit })
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch rankings');
         }
-
-        if (data) {
+        
+        const data = await response.json();
+        
+        if (Array.isArray(data)) {
           setRankings(data as UserRanking[]);
+        } else {
+          console.error('Unexpected response format:', data);
+          setRankings([]);
         }
       } catch (error) {
-        console.error('Error in rankings fetch:', error);
+        console.error('Error fetching rankings:', error);
+        setRankings([]);
       } finally {
         setLoading(false);
       }
