@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/PageTitle';
-import BibleVerseCard from '@/components/BibleVerseCard';
+import BibleVerseCard, { BibleVerse as BibleVerseCardType } from '@/components/BibleVerseCard';
 import { bibleVerses } from '@/data/bibleData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -20,6 +20,20 @@ interface LocationState {
 
 // Constants
 const FREE_PLAN_VERSE_LIMIT = 2;
+
+// Map Bible Data verses to BibleVerseCard compatible format
+const mapToBibleVerseCardType = (verse: typeof bibleVerses[0]): BibleVerseCardType => {
+  return {
+    id: verse.id,
+    title: verse.book + " " + verse.chapter + ":" + verse.verse,
+    subtitle: verse.summary,
+    text: verse.text,
+    book: verse.book,
+    chapter: verse.chapter,
+    verses: verse.verse.toString(),
+    source: "Bible"
+  };
+};
 
 const StudyRoutePage: React.FC = () => {
   const { currentUser, updateProfile, isPro } = useAuth();
@@ -415,7 +429,7 @@ const StudyRoutePage: React.FC = () => {
                     className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
                   >
                     <BibleVerseCard
-                      verse={verse}
+                      verse={mapToBibleVerseCardType(verse)}
                       isRead={false}
                       userReflection={userReflection}
                       onMarkAsRead={handleMarkAsRead}
@@ -447,7 +461,7 @@ const StudyRoutePage: React.FC = () => {
                     className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
                   >
                     <BibleVerseCard
-                      verse={verse}
+                      verse={mapToBibleVerseCardType(verse)}
                       isRead={true}
                       userReflection={userReflection}
                       onMarkAsRead={handleMarkAsRead}
