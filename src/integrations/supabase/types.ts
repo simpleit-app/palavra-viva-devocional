@@ -30,6 +30,7 @@ export type Database = {
           consecutive_days: number
           created_at: string
           email: string
+          gender: string | null
           id: string
           last_access: string
           level: number
@@ -44,6 +45,7 @@ export type Database = {
           consecutive_days?: number
           created_at?: string
           email: string
+          gender?: string | null
           id: string
           last_access?: string
           level?: number
@@ -58,6 +60,7 @@ export type Database = {
           consecutive_days?: number
           created_at?: string
           email?: string
+          gender?: string | null
           id?: string
           last_access?: string
           level?: number

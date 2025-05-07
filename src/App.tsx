@@ -101,6 +101,10 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* Redirect for Index.tsx which had unneeded redirects */}
+              <Route path="/index" element={<Navigate to="/" replace />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

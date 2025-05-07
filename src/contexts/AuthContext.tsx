@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -259,6 +260,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
       
+      // Ensure the browser redirects to the dashboard on successful login
+      if (data.session) {
+        window.location.href = '/dashboard';
+      }
+      
     } catch (error) {
       console.error("Error signing in:", error);
       throw error;
@@ -305,7 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.chaptersRead !== undefined) profileData.chapters_read = data.chaptersRead;
       if (data.consecutiveDays !== undefined) profileData.consecutive_days = data.consecutiveDays;
       if (data.points !== undefined) profileData.points = data.points;
-      // Do not allow nickname or gender to be updated
+      if (data.nickname !== undefined) profileData.nickname = data.nickname;
       
       const { error } = await supabase
         .from('profiles')
@@ -334,6 +340,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       setCurrentUser(null);
+      
+      // Redirect to login page after sign out
+      window.location.href = '/login';
       
     } catch (error) {
       console.error("Error signing out:", error);
