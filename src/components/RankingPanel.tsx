@@ -32,7 +32,7 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
         
         // Call the Supabase Edge Function directly
         const response = await fetch(
-          'https://mcoeiucylazrjvhaemmc.supabase.co/functions/v1/fetch_user_rankings',
+          `https://mcoeiucylazrjvhaemmc.supabase.co/functions/v1/fetch_user_rankings`,
           {
             method: 'POST',
             headers: {
