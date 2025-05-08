@@ -2,7 +2,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -10,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   isPro: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signUp: (name: string, email: string, password: string, gender: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
   updateProfile: (fields: Partial<UserProfile>) => Promise<void>;
@@ -43,7 +42,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Set up auth state change listener
@@ -228,7 +226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (name: string, email: string, password: string, gender: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -236,6 +234,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         options: {
           data: {
             name: name,
+            gender: gender,
           },
         },
       });
@@ -252,7 +251,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await supabase.auth.signOut();
       setCurrentUser(null);
       setIsPro(false);
-      navigate('/'); // Navigate to landing page on logout
+      window.location.href = '/'; // Use window.location instead of navigate
     } catch (error) {
       console.error("Sign out error:", error);
     }

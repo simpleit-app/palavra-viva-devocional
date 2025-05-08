@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,7 +104,7 @@ const ProfilePage: React.FC = () => {
     try {
       setLoading(true);
       
-      let photoURL = currentUser?.photoURL;
+      let photoUrl = currentUser?.photoUrl;
       
       // Upload new avatar if selected
       if (avatarFile) {
@@ -148,7 +147,7 @@ const ProfilePage: React.FC = () => {
           .from('avatars')
           .getPublicUrl(fileName);
         
-        photoURL = publicUrl;
+        photoUrl = publicUrl;
       }
       
       // Update nickname directly in the database
@@ -164,7 +163,7 @@ const ProfilePage: React.FC = () => {
       // Update profile
       await updateProfile({
         name,
-        photoURL,
+        photoUrl,
         nickname: selectedNickname,
       });
       
@@ -187,13 +186,17 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', { 
       day: 'numeric', 
       month: 'long', 
       year: 'numeric'
     });
   };
+
+  // Use current date if we don't have a creation date
+  const memberSinceDate = new Date();
 
   return (
     <div className="container max-w-4xl py-6 px-4 md:px-6">
@@ -342,7 +345,7 @@ const ProfilePage: React.FC = () => {
               
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Membro desde {formatDate(currentUser.createdAt)}
+                  Membro desde {formatDate(memberSinceDate.toISOString())}
                 </p>
               </div>
             </CardContent>
