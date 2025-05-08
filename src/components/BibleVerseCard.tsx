@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, CheckCircle, Edit, Save, Trash2 } from 'lucide-react';
+import { Check, CheckCircle, Edit, Save, Trash2, Loader2 } from 'lucide-react';
 import { UserReflection } from '@/data/bibleData';
 
 export interface BibleVerse {
@@ -25,6 +25,7 @@ interface BibleVerseCardProps {
   onSaveReflection: (verseId: string, text: string) => void;
   onDeleteReflection?: (reflectionId: string, verseId: string) => void;
   highlight?: boolean;
+  disabled?: boolean;
 }
 
 const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
@@ -35,6 +36,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   onSaveReflection,
   onDeleteReflection,
   highlight = false,
+  disabled = false,
 }) => {
   const [reflectionText, setReflectionText] = useState(userReflection?.text || '');
   const [isEditing, setIsEditing] = useState(!userReflection && !isRead);
@@ -72,8 +74,13 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
               size="sm" 
               onClick={() => onMarkAsRead(verse.id)}
               className="flex items-center gap-1"
+              disabled={disabled}
             >
-              <CheckCircle className="h-4 w-4" />
+              {disabled ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
               <span>Marcar como lido</span>
             </Button>
           </div>
@@ -89,6 +96,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                 value={reflectionText}
                 onChange={(e) => setReflectionText(e.target.value)}
                 className="min-h-[100px]"
+                disabled={disabled}
               />
               
               <div className="flex justify-end gap-2">
@@ -97,6 +105,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                     variant="outline" 
                     size="sm" 
                     onClick={() => setIsEditing(false)}
+                    disabled={disabled}
                   >
                     Cancelar
                   </Button>
@@ -105,9 +114,13 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                 <Button 
                   size="sm" 
                   onClick={handleSave}
-                  disabled={!reflectionText.trim()}
+                  disabled={!reflectionText.trim() || disabled}
                 >
-                  <Save className="h-4 w-4 mr-1" />
+                  {disabled ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-1" />
+                  )}
                   Salvar reflexão
                 </Button>
               </div>
@@ -125,6 +138,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                       variant="outline" 
                       size="sm" 
                       onClick={() => setIsEditing(true)}
+                      disabled={disabled}
                     >
                       <Edit className="h-4 w-4 mr-1" />
                       Editar
@@ -135,8 +149,13 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                         variant="outline" 
                         size="sm" 
                         onClick={handleDelete}
+                        disabled={disabled}
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
+                        {disabled ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-1" />
+                        )}
                         Excluir
                       </Button>
                     )}
@@ -151,6 +170,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                     size="sm" 
                     onClick={() => setIsEditing(true)}
                     className="mt-2"
+                    disabled={disabled}
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Escrever reflexão

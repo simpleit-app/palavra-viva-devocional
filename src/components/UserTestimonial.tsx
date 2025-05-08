@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Save, Edit } from 'lucide-react';
 
@@ -66,10 +66,19 @@ const UserTestimonial: React.FC = () => {
       return;
     }
     
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para salvar um depoimento.",
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       const testimonialData = {
-        user_id: currentUser?.id,
+        user_id: currentUser.id,
         quote: quote.trim(),
         author_role: authorRole.trim() || null,
         updated_at: new Date().toISOString(),
@@ -82,7 +91,7 @@ const UserTestimonial: React.FC = () => {
         operation = supabase
           .from('user_testimonials')
           .update(testimonialData)
-          .eq('user_id', currentUser?.id);
+          .eq('user_id', currentUser.id);
       } else {
         // Insert new testimonial
         operation = supabase
