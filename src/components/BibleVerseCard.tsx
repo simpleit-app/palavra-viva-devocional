@@ -1,15 +1,28 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, CheckCircle, Edit, Save, Trash2, Loader2 } from 'lucide-react';
 import { UserReflection } from '@/data/bibleData';
+import { BookOpen, CheckCircle, Edit, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export interface BibleVerse {
   id: string;
   title: string;
-  subtitle?: string;
+  subtitle: string;
   text: string;
   book: string;
   chapter: number;
@@ -25,7 +38,6 @@ interface BibleVerseCardProps {
   onSaveReflection: (verseId: string, text: string) => void;
   onDeleteReflection?: (reflectionId: string, verseId: string) => void;
   highlight?: boolean;
-  disabled?: boolean;
 }
 
 const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
@@ -35,163 +47,137 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   onMarkAsRead,
   onSaveReflection,
   onDeleteReflection,
-  highlight = false,
-  disabled = false,
+  highlight = false
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
   const [reflectionText, setReflectionText] = useState(userReflection?.text || '');
-  const [isEditing, setIsEditing] = useState(!userReflection && !isRead);
   
   const handleSave = () => {
-    if (reflectionText.trim()) {
-      onSaveReflection(verse.id, reflectionText);
-      setIsEditing(false);
-    }
+    onSaveReflection(verse.id, reflectionText);
+    setIsEditing(false);
   };
-  
+
   const handleDelete = () => {
-    if (userReflection && onDeleteReflection) {
+    if (onDeleteReflection && userReflection) {
       onDeleteReflection(userReflection.id, verse.id);
     }
   };
+  
+  const formatReflectionDate = (date: Date) => {
+    return format(date, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
 
   return (
-    <Card className={`transition-all ${highlight ? 'border-primary shadow-md ring-2 ring-primary ring-opacity-50' : ''}`}>
+    <Card className={`mb-6 ${highlight ? 'border-primary shadow-lg' : ''}`}>
       <CardHeader>
-        <CardTitle>{verse.title}</CardTitle>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <p className="text-lg italic">&ldquo;{verse.text}&rdquo;</p>
-        
-        {verse.subtitle && (
-          <p className="text-sm text-muted-foreground">{verse.subtitle}</p>
-        )}
-        
-        {!isRead && (
-          <div className="pt-2">
+        <CardTitle className="flex items-center justify-between">
+          <div>
+            <span>{verse.title}</span>
+            {isRead && (
+              <span className="ml-2 inline-flex items-center text-xs font-medium text-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" /> Lido
+              </span>
+            )}
+          </div>
+          {!isRead && (
             <Button 
-              variant="outline" 
               size="sm" 
+              variant="outline" 
               onClick={() => onMarkAsRead(verse.id)}
               className="flex items-center gap-1"
-              disabled={disabled}
             >
-              {disabled ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle className="h-4 w-4" />
-              )}
-              <span>Marcar como lido</span>
+              <BookOpen className="h-4 w-4" /> 
+              Marcar como lido
             </Button>
-          </div>
-        )}
-        
-        <div className="pt-2">
-          <h3 className="text-lg font-medium mb-2">Minha Reflexão</h3>
-          
-          {isEditing ? (
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Escreva sua reflexão sobre este texto..."
-                value={reflectionText}
-                onChange={(e) => setReflectionText(e.target.value)}
-                className="min-h-[100px]"
-                disabled={disabled}
-              />
-              
-              <div className="flex justify-end gap-2">
-                {userReflection && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setIsEditing(false)}
-                    disabled={disabled}
-                  >
-                    Cancelar
-                  </Button>
-                )}
-                
-                <Button 
-                  size="sm" 
-                  onClick={handleSave}
-                  disabled={!reflectionText.trim() || disabled}
-                >
-                  {disabled ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-1" />
-                  )}
-                  Salvar reflexão
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {userReflection ? (
-                <div className="space-y-2">
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <p>{userReflection.text}</p>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setIsEditing(true)}
-                      disabled={disabled}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                    
-                    {onDeleteReflection && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleDelete}
-                        disabled={disabled}
-                      >
-                        {disabled ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 mr-1" />
-                        )}
-                        Excluir
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-muted-foreground">Você ainda não escreveu uma reflexão.</p>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setIsEditing(true)}
-                    className="mt-2"
-                    disabled={disabled}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Escrever reflexão
-                  </Button>
-                </div>
-              )}
-            </>
           )}
-        </div>
-      </CardContent>
-      
-      <CardFooter className="flex justify-between">
-        <div className="text-xs text-muted-foreground">
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-muted-foreground font-medium">{verse.subtitle}</p>
+        <div className="text-lg whitespace-pre-wrap">{verse.text}</div>
+        <div className="text-right text-sm text-muted-foreground italic">
           {verse.book} {verse.chapter}:{verse.verses}
         </div>
         
-        <div className="text-xs text-muted-foreground">
-          {isRead ? "Lido" : "Não lido"}
-          {isRead && <Check className="inline-block h-3 w-3 ml-1" />}
-        </div>
-      </CardFooter>
+        {userReflection && !isEditing && (
+          <div className="mt-4 border-t pt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="text-sm font-medium">Sua reflexão</h4>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                
+                {onDeleteReflection && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir reflexão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir esta reflexão? 
+                          Esta ação também irá desmarcar o versículo como lido.
+                          Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">
+              {formatReflectionDate(userReflection.createdAt)}
+            </p>
+            <div className="bg-muted/30 p-3 rounded-md whitespace-pre-wrap">
+              {userReflection.text}
+            </div>
+          </div>
+        )}
+        
+        {(isEditing || (!userReflection && isRead)) && (
+          <div className="mt-4 border-t pt-4">
+            <h4 className="text-sm font-medium mb-2">Sua reflexão</h4>
+            <Textarea
+              value={reflectionText}
+              onChange={(e) => setReflectionText(e.target.value)}
+              placeholder="Escreva suas reflexões sobre este texto..."
+              rows={4}
+              className="mb-2"
+            />
+            <div className="flex justify-end gap-2">
+              {isEditing && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setReflectionText(userReflection?.text || '');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              )}
+              <Button size="sm" onClick={handleSave} disabled={!reflectionText.trim()}>
+                Salvar
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 };

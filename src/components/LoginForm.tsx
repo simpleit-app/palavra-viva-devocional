@@ -17,7 +17,7 @@ const LoginForm: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signIn, signUp } = useAuth();
+  const { signInWithCredentials, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +31,7 @@ const LoginForm: React.FC = () => {
         }
         await signUp(name, email, password, gender);
       } else {
-        await signIn(email, password);
+        await signInWithCredentials(email, password);
       }
     } catch (error: any) {
       console.error('Authentication error:', error);

@@ -45,7 +45,6 @@ const StudyRoutePage: React.FC = () => {
   const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const location = useLocation();
   const hasTriggeredRefresh = useRef(false);
-  const [updatingData, setUpdatingData] = useState(false);
 
   // Extract scrollToVerse from location state
   const locationState = location.state as LocationState;
@@ -66,12 +65,9 @@ const StudyRoutePage: React.FC = () => {
           behavior: 'smooth', 
           block: 'start' 
         });
-        // Set the active tab to the one containing the verse
-        const isRead = readVerses.includes(scrollToVerseId);
-        setActiveTab(isRead ? 'read' : 'unread');
       }, 100);
     }
-  }, [scrollToVerseId, loading, readVerses]);
+  }, [scrollToVerseId, loading]);
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -110,7 +106,7 @@ const StudyRoutePage: React.FC = () => {
       
       setReflections(formattedReflections);
       
-      // Only update the profile if we really need to to avoid cascade updates
+      // Só atualiza o perfil se realmente precisa para evitar atualizações em cascata
       if (currentUser.chaptersRead !== verseIds.length || 
           currentUser.totalReflections !== formattedReflections.length) {
         await updateProfile({
@@ -166,12 +162,12 @@ const StudyRoutePage: React.FC = () => {
         needsUpdate = true;
       }
       
-      // Only update if consecutive_days actually changed
+      // Só atualiza se realmente houver mudança no consecutive_days
       if (needsUpdate) {
         await updateProfile({ consecutiveDays: newStreak });
       }
       
-      // Update last_access only if it's a different day
+      // Atualiza o last_access apenas se for um dia diferente
       if (lastAccess.getTime() !== today.getTime()) {
         await supabase
           .from('profiles')
@@ -188,8 +184,6 @@ const StudyRoutePage: React.FC = () => {
     if (!currentUser) return;
     if (readVerses.includes(verseId)) return;
     
-    setUpdatingData(true);
-    
     // Check if user has reached the free plan limit
     if (!isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT) {
       toast({
@@ -197,7 +191,6 @@ const StudyRoutePage: React.FC = () => {
         title: "Limite atingido",
         description: "Você atingiu o limite de textos do plano gratuito. Atualize para o plano Pro para continuar.",
       });
-      setUpdatingData(false);
       return;
     }
     
@@ -214,10 +207,8 @@ const StudyRoutePage: React.FC = () => {
       const updatedReadVerses = [...readVerses, verseId];
       setReadVerses(updatedReadVerses);
       
-      // Update the user profile with new stats
-      const chaptersRead = updatedReadVerses.length;
       await updateProfile({
-        chaptersRead: chaptersRead
+        chaptersRead: updatedReadVerses.length
       });
       
       // Switch to read tab when a verse is marked as read
@@ -235,15 +226,11 @@ const StudyRoutePage: React.FC = () => {
         title: "Erro ao marcar como lido",
         description: "Não foi possível atualizar seu progresso. Tente novamente mais tarde.",
       });
-    } finally {
-      setUpdatingData(false);
     }
   };
 
   const handleSaveReflection = async (verseId: string, text: string) => {
     if (!currentUser) return;
-    
-    setUpdatingData(true);
     
     // Check if user has reached the free plan limit for reflections
     const existingReflection = reflections.find(
@@ -256,7 +243,6 @@ const StudyRoutePage: React.FC = () => {
         title: "Limite atingido",
         description: "Você atingiu o limite de reflexões do plano gratuito. Atualize para o plano Pro para continuar.",
       });
-      setUpdatingData(false);
       return;
     }
     
@@ -304,10 +290,8 @@ const StudyRoutePage: React.FC = () => {
         const updatedReflections = [...reflections, newReflection];
         setReflections(updatedReflections);
         
-        // Update the user profile with new stats
-        const totalReflections = updatedReflections.length;
         await updateProfile({
-          totalReflections: totalReflections
+          totalReflections: updatedReflections.length
         });
       }
       
@@ -323,15 +307,11 @@ const StudyRoutePage: React.FC = () => {
         title: "Erro ao salvar",
         description: "Não foi possível salvar sua reflexão.",
       });
-    } finally {
-      setUpdatingData(false);
     }
   };
 
   const handleDeleteReflection = async (reflectionId: string, verseId: string) => {
     if (!currentUser) return;
-    
-    setUpdatingData(true);
     
     try {
       // Delete the reflection
@@ -380,8 +360,6 @@ const StudyRoutePage: React.FC = () => {
         title: "Erro ao excluir",
         description: "Não foi possível excluir a reflexão.",
       });
-    } finally {
-      setUpdatingData(false);
     }
   };
 
@@ -412,7 +390,7 @@ const StudyRoutePage: React.FC = () => {
         </Alert>
       )}
 
-      {hasReachedFreeLimit && !isPro && (
+      {hasReachedFreeLimit && (
         <div className="mb-6">
           <SubscriptionUpgrade />
         </div>
@@ -458,7 +436,6 @@ const StudyRoutePage: React.FC = () => {
                       onSaveReflection={handleSaveReflection}
                       onDeleteReflection={handleDeleteReflection}
                       highlight={scrollToVerseId === verse.id}
-                      disabled={updatingData}
                     />
                   </div>
                 );
@@ -491,7 +468,6 @@ const StudyRoutePage: React.FC = () => {
                       onSaveReflection={handleSaveReflection}
                       onDeleteReflection={handleDeleteReflection}
                       highlight={scrollToVerseId === verse.id}
-                      disabled={updatingData}
                     />
                   </div>
                 );

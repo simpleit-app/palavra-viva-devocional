@@ -29,27 +29,19 @@ const EnhancedLandingPage = () => (
   </div>
 );
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 30000
-    }
-  }
-});
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <ThemeProvider>
-        <TooltipProvider>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
+    <ThemeProvider>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<EnhancedLandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/upgrade-pro" element={<AdminCreator />} />
               
@@ -115,10 +107,10 @@ const App = () => (
               
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </AuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
