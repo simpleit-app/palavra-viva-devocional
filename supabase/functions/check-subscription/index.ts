@@ -60,34 +60,9 @@ serve(async (req) => {
       throw new Error(`Error fetching subscriber: ${subscriberError.message}`);
     }
     
-    // Check if this is the special user that should always be Pro
-    const isSpecialUser = user.email === "simpleit.solucoes@gmail.com";
-    
     // If no subscriber record, create one
     if (!subscriber) {
       logStep("No subscriber found, creating record");
-      
-      // If it's the special user, make them Pro by default
-      if (isSpecialUser) {
-        await supabaseClient.from("subscribers").insert({
-          user_id: user.id,
-          email: user.email,
-          subscription_tier: "pro",
-          subscribed: true,
-          subscription_end: new Date(2099, 11, 31).toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        
-        return new Response(JSON.stringify({ 
-          subscribed: true,
-          subscription_tier: "pro",
-          subscription_end: new Date(2099, 11, 31).toISOString()
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
-      }
-      
       await supabaseClient.from("subscribers").insert({
         user_id: user.id,
         email: user.email,
@@ -106,39 +81,12 @@ serve(async (req) => {
       });
     }
     
-    // Special case: If it's our special user with a manual Pro upgrade
-    if (isSpecialUser && subscriber.subscription_tier === "pro") {
-      logStep("Special user found with Pro status, maintaining Pro access");
-      return new Response(JSON.stringify({ 
-        subscribed: true,
-        subscription_tier: "pro",
-        subscription_end: subscriber.subscription_end
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-    
     // If the subscriber has no Stripe customer ID, check if they have one
     if (!subscriber.stripe_customer_id) {
       const customers = await stripe.customers.list({ email: user.email, limit: 1 });
       
       if (customers.data.length === 0) {
         logStep("No customer found, updating as free tier");
-        
-        // Special case for our manually upgraded user
-        if (isSpecialUser && subscriber.subscription_tier === "pro") {
-          logStep("Maintaining Pro status for special user without Customer ID");
-          return new Response(JSON.stringify({ 
-            subscribed: true,
-            subscription_tier: "pro",
-            subscription_end: subscriber.subscription_end
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
-        }
-        
         await supabaseClient
           .from("subscribers")
           .update({
@@ -185,12 +133,7 @@ serve(async (req) => {
     let subscriptionTier = "free";
     let subscriptionEnd = null;
 
-    // Handle the case for the special user with Pro tier
-    if (isSpecialUser && subscriber.subscription_tier === "pro") {
-      subscriptionTier = "pro";
-      subscriptionEnd = subscriber.subscription_end;
-      logStep("Special Pro user found, maintaining Pro status", { subscriptionEnd });
-    } else if (hasActiveSub) {
+    if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       subscriptionTier = "pro";
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
@@ -206,17 +149,17 @@ serve(async (req) => {
     await supabaseClient
       .from("subscribers")
       .update({
-        subscribed: subscriptionTier === "pro",
+        subscribed: hasActiveSub,
         subscription_tier: subscriptionTier,
         subscription_end: subscriptionEnd,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user.id);
 
-    logStep("Updated database with subscription info", { subscribed: subscriptionTier === "pro", subscriptionTier });
+    logStep("Updated database with subscription info", { subscribed: hasActiveSub, subscriptionTier });
     
     return new Response(JSON.stringify({
-      subscribed: subscriptionTier === "pro",
+      subscribed: hasActiveSub,
       subscription_tier: subscriptionTier,
       subscription_end: subscriptionEnd
     }), {

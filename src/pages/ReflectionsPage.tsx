@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
@@ -27,7 +26,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const FREE_PLAN_REFLECTION_LIMIT = 2;
 
 const ReflectionsPage: React.FC = () => {
-  const { currentUser, updateProfile, isPro } = useAuth();
+  const { currentUser, updateProfile, isPro, refreshSubscription } = useAuth();
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [editingReflection, setEditingReflection] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -35,11 +34,10 @@ const ReflectionsPage: React.FC = () => {
   const [reflectionToDelete, setReflectionToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fix: Only load reflections once when component mounts or when user changes
-  // Remove the refreshSubscription call that was causing the flickering
   useEffect(() => {
     if (currentUser) {
       loadReflections();
+      refreshSubscription();
     }
   }, [currentUser]);
 
@@ -257,7 +255,7 @@ const ReflectionsPage: React.FC = () => {
             Você ainda não tem reflexões salvas.
           </p>
           <Button asChild>
-            <Link to="/study-route">Começar a Estudar</Link>
+            <a href="/study-route">Começar a Estudar</a>
           </Button>
         </div>
       ) : (

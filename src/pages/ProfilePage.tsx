@@ -1,19 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import PageTitle from '@/components/PageTitle';
 import UserAvatar from '@/components/UserAvatar';
 import { Pencil, Upload, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
-import UserTestimonial from '@/components/UserTestimonial';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 
 const ProfilePage: React.FC = () => {
   const { currentUser, updateProfile, refreshSubscription, isPro } = useAuth();
@@ -21,58 +18,6 @@ const ProfilePage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [availableNicknames, setAvailableNicknames] = useState<string[]>([]);
-  const [selectedNickname, setSelectedNickname] = useState(currentUser?.nickname || '');
-  const [loadingNicknames, setLoadingNicknames] = useState(false);
-
-  useEffect(() => {
-    if (currentUser) {
-      fetchAvailableNicknames();
-    }
-  }, [currentUser]);
-
-  const fetchAvailableNicknames = async () => {
-    setLoadingNicknames(true);
-    try {
-      // Get biblical names that are not already used as nicknames
-      const { data: biblicalNames, error: biblicalNamesError } = await supabase
-        .from('biblical_names')
-        .select('name')
-        .order('name');
-
-      if (biblicalNamesError) throw biblicalNamesError;
-
-      const { data: usedNicknames, error: usedNicknamesError } = await supabase
-        .from('profiles')
-        .select('nickname')
-        .not('id', 'eq', currentUser.id)
-        .not('nickname', 'is', null);
-
-      if (usedNicknamesError) throw usedNicknamesError;
-
-      // Filter out already used nicknames
-      const usedNicknameSet = new Set(usedNicknames.map(p => p.nickname));
-      const availableNames = biblicalNames
-        .map(n => n.name)
-        .filter(name => !usedNicknameSet.has(name));
-
-      // Add current user's nickname if it exists
-      if (currentUser.nickname && !availableNames.includes(currentUser.nickname)) {
-        availableNames.unshift(currentUser.nickname);
-      }
-
-      setAvailableNicknames(availableNames);
-    } catch (error) {
-      console.error('Error fetching available nicknames:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível carregar os nomes bíblicos disponíveis.',
-      });
-    } finally {
-      setLoadingNicknames(false);
-    }
-  };
 
   if (!currentUser) return null;
 
@@ -151,21 +96,10 @@ const ProfilePage: React.FC = () => {
         photoURL = publicUrl;
       }
       
-      // Update nickname directly in the database
-      if (selectedNickname !== currentUser.nickname) {
-        const { error: nicknameError } = await supabase
-          .from('profiles')
-          .update({ nickname: selectedNickname })
-          .eq('id', currentUser.id);
-          
-        if (nicknameError) throw nicknameError;
-      }
-      
       // Update profile
       await updateProfile({
         name,
         photoURL,
-        nickname: selectedNickname,
       });
       
       await refreshSubscription();
@@ -252,38 +186,6 @@ const ProfilePage: React.FC = () => {
                     onChange={(e) => setName(e.target.value)}
                   />
                   <Pencil className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nickname">Nome Bíblico (Apelido)</Label>
-                <Select 
-                  value={selectedNickname} 
-                  onValueChange={setSelectedNickname}
-                  disabled={loadingNicknames}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione um nome bíblico" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableNicknames.map((nickname) => (
-                      <SelectItem key={nickname} value={nickname}>
-                        {nickname}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Este nome será exibido no ranking global
-                </p>
-              </div>
-
-              <Separator className="my-2" />
-              
-              <div className="space-y-2">
-                <Label>Sexo</Label>
-                <div className="text-sm">
-                  {currentUser.gender === 'male' ? 'Masculino' : 'Feminino'}
                 </div>
               </div>
               
@@ -388,9 +290,7 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
       
-      <div className="mt-6 space-y-6">
-        <UserTestimonial />
-        
+      <div className="mt-6">
         <Card>
           <CardHeader>
             <CardTitle>Planos Disponíveis</CardTitle>

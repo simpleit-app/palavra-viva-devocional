@@ -4,60 +4,33 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
 
 const AdminCreator = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
-  const { refreshSubscription, isPro } = useAuth();
-  const { toast } = useToast();
 
-  const upgradeUserToPro = async () => {
+  const createAdminUser = async () => {
     setLoading(true);
     setResult(null);
     
     try {
-      // First update the subscribers table to mark the user as Pro
-      const { data: subscriberData, error: subscriberError } = await supabase
-        .from('subscribers')
-        .update({
-          subscription_tier: 'pro',
-          subscribed: true,
-          subscription_end: new Date(2099, 11, 31).toISOString() // Far future date
-        })
-        .eq('email', 'simpleit.solucoes@gmail.com')
-        .select();
+      console.log('Calling create-admin function...');
+      const { data, error } = await supabase.functions.invoke('create-admin');
       
-      if (subscriberError) {
-        console.error('Error upgrading user to Pro:', subscriberError);
-        setResult({ error: subscriberError.message || 'Ocorreu um erro ao atualizar o usuário para o plano Pro.' });
+      if (error) {
+        console.error('Error calling create-admin function:', error);
+        setResult({ error: error.message || 'Ocorreu um erro ao criar o usuário admin.' });
         return;
       }
       
-      console.log('Upgrade response:', subscriberData);
-      
-      // Now manually refresh the subscription status in the global auth context
-      await refreshSubscription();
-      
-      // Double-check if the update was successful by refreshing again
-      setTimeout(async () => {
-        await refreshSubscription();
-        console.log('Subscription refreshed again, isPro status:', isPro);
-      }, 1000);
-      
+      console.log('Function response:', data);
       setResult({ 
-        success: true, 
-        message: 'Usuário simpleit.solucoes@gmail.com atualizado para o plano Pro com sucesso!'
-      });
-      
-      toast({
-        title: "Upgrade concluído",
-        description: "O usuário foi atualizado para o plano Pro com sucesso e agora tem acesso ilimitado.",
+        success: data.success, 
+        message: data.message || 'Usuário admin criado com sucesso!'
       });
       
     } catch (err: any) {
-      console.error('Exception while upgrading user:', err);
+      console.error('Exception while calling create-admin function:', err);
       setResult({ error: err.message || 'Ocorreu um erro inesperado.' });
     } finally {
       setLoading(false);
@@ -66,15 +39,15 @@ const AdminCreator = () => {
 
   return (
     <div className="p-4 max-w-md mx-auto">
-      <h2 className="text-xl font-bold mb-4">Atualizar Usuário para Pro</h2>
+      <h2 className="text-xl font-bold mb-4">Criar Usuário Admin</h2>
       
       <p className="text-sm text-muted-foreground mb-4">
-        Isso atualizará o usuário simpleit.solucoes@gmail.com para o plano Pro, removendo 
-        todas as limitações de leituras e reflexões.
+        Isso criará ou atualizará o usuário admin@palavraviva.com com o plano Pro.
+        Senha: admin
       </p>
       
       <Button 
-        onClick={upgradeUserToPro} 
+        onClick={createAdminUser} 
         disabled={loading}
         className="w-full mb-4"
       >
@@ -84,7 +57,7 @@ const AdminCreator = () => {
             Processando...
           </>
         ) : (
-          'Atualizar para Pro'
+          'Criar Usuário Admin'
         )}
       </Button>
       
@@ -102,6 +75,14 @@ const AdminCreator = () => {
             Erro: {result.error}
           </AlertDescription>
         </Alert>
+      )}
+      
+      {result?.success && (
+        <div className="mt-4 text-sm">
+          <p className="font-medium">Credenciais de acesso:</p>
+          <p>Email: admin@palavraviva.com</p>
+          <p>Senha: admin</p>
+        </div>
       )}
     </div>
   );

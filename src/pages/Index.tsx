@@ -9,7 +9,6 @@ const Index = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    // Verificar autenticação e redirecionar apropriadamente
     if (isAuthenticated) {
       navigate('/dashboard');
     } else {
@@ -17,7 +16,6 @@ const Index = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Componente de fallback enquanto verifica autenticação
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800 p-4">
       <div className="text-center">

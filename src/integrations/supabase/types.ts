@@ -9,35 +9,17 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      biblical_names: {
-        Row: {
-          id: number
-          name: string
-        }
-        Insert: {
-          id?: number
-          name: string
-        }
-        Update: {
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           chapters_read: number
           consecutive_days: number
           created_at: string
           email: string
-          gender: string | null
           id: string
           last_access: string
           level: number
           name: string
-          nickname: string | null
           photo_url: string | null
-          points: number | null
           total_reflections: number
         }
         Insert: {
@@ -45,14 +27,11 @@ export type Database = {
           consecutive_days?: number
           created_at?: string
           email: string
-          gender?: string | null
           id: string
           last_access?: string
           level?: number
           name: string
-          nickname?: string | null
           photo_url?: string | null
-          points?: number | null
           total_reflections?: number
         }
         Update: {
@@ -60,14 +39,11 @@ export type Database = {
           consecutive_days?: number
           created_at?: string
           email?: string
-          gender?: string | null
           id?: string
           last_access?: string
           level?: number
           name?: string
-          nickname?: string | null
           photo_url?: string | null
-          points?: number | null
           total_reflections?: number
         }
         Relationships: []
@@ -169,106 +145,12 @@ export type Database = {
         }
         Relationships: []
       }
-      testimonials: {
-        Row: {
-          author_name: string
-          author_role: string | null
-          created_at: string
-          id: string
-          is_featured: boolean | null
-          quote: string
-        }
-        Insert: {
-          author_name: string
-          author_role?: string | null
-          created_at?: string
-          id?: string
-          is_featured?: boolean | null
-          quote: string
-        }
-        Update: {
-          author_name?: string
-          author_role?: string | null
-          created_at?: string
-          id?: string
-          is_featured?: boolean | null
-          quote?: string
-        }
-        Relationships: []
-      }
-      user_testimonials: {
-        Row: {
-          author_role: string | null
-          created_at: string | null
-          id: string
-          is_approved: boolean | null
-          quote: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          author_role?: string | null
-          created_at?: string | null
-          id?: string
-          is_approved?: boolean | null
-          quote: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          author_role?: string | null
-          created_at?: string | null
-          id?: string
-          is_approved?: boolean | null
-          quote?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_testimonials_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
-      user_rankings: {
-        Row: {
-          level: number | null
-          nickname: string | null
-          points: number | null
-          rank: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      fetch_public_testimonials: {
-        Args: { count_limit?: number }
-        Returns: {
-          id: string
-          quote: string
-          author_name: string
-          author_role: string
-        }[]
-      }
-      generate_unique_biblical_nickname: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_public_testimonials: {
-        Args: { count_limit: number }
-        Returns: {
-          id: string
-          quote: string
-          author_name: string
-          author_role: string
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
