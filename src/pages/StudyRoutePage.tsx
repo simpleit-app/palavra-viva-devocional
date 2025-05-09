@@ -231,7 +231,7 @@ const StudyRoutePage: React.FC = () => {
         points: points
       });
       
-      // Switch to read tab when a verse is marked as read
+      // Immediately switch to read tab when a verse is marked as read
       setActiveTab('read');
       
       toast({
