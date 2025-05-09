@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
@@ -300,7 +301,7 @@ const ReflectionsPage: React.FC = () => {
                       className="p-0 h-auto text-primary flex items-center gap-1"
                       asChild
                     >
-                      <Link to={`/study-route`} state={{ scrollToVerse: verse.id }}>
+                      <Link to={`/study-route`} state={{ scrollToVerse: reflection.verseId }}>
                         <BookOpen className="h-4 w-4" />
                         <span>Ver texto de estudo completo</span>
                       </Link>
