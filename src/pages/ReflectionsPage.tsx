@@ -214,14 +214,15 @@ const ReflectionsPage: React.FC = () => {
   };
 
   const handleViewFullStudy = (verseId: string) => {
+    // Set local storage to indicate we need to switch to the 'read' tab
+    localStorage.setItem('activeStudyTab', 'read');
+    
+    // Navigate to the study route with the verse ID in state
     navigate('/study-route', { 
       state: { 
         scrollToVerse: verseId 
       } 
     });
-    
-    // Set local storage to indicate we need to switch to the 'read' tab
-    localStorage.setItem('activeStudyTab', 'read');
   };
 
   const copyToClipboard = (text: string) => {

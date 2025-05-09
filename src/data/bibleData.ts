@@ -1,3 +1,4 @@
+
 // Types for Bible Study content
 export type BibleVerse = {
   id: string;
@@ -91,6 +92,33 @@ export const bibleVerses: BibleVerse[] = [
     text: "Venham a mim, todos os que estão cansados e sobrecarregados, e eu lhes darei descanso.",
     summary: "Jesus oferece um convite radical: trocar nossos fardos pelo seu descanso. Em um mundo que glorifica o trabalho incessante, Jesus nos chama para encontrar descanso verdadeiro em relacionamento com ele.",
     order: 7
+  },
+  {
+    id: "8",
+    book: "Gálatas",
+    chapter: 5,
+    verse: 22,
+    text: "Mas o fruto do Espírito é amor, alegria, paz, paciência, amabilidade, bondade, fidelidade, mansidão e domínio próprio.",
+    summary: "Paulo descreve como é uma vida transformada pelo Espírito. Estes nove aspectos do fruto espiritual são características que Deus quer desenvolver em cada crente, mostrando como é viver sob sua influência.",
+    order: 8
+  },
+  {
+    id: "9",
+    book: "Hebreus",
+    chapter: 11, 
+    verse: 1,
+    text: "A fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.",
+    summary: "O autor de Hebreus define a fé como confiança nas promessas de Deus que ainda não vemos cumpridas. A verdadeira fé não é apenas acreditar intelectualmente, mas agir com base nessa confiança.",
+    order: 9
+  },
+  {
+    id: "10",
+    book: "1 João",
+    chapter: 4,
+    verse: 7,
+    text: "Amados, amemos uns aos outros, pois o amor procede de Deus. Aquele que ama é nascido de Deus e conhece a Deus.",
+    summary: "João enfatiza que o amor é a marca distintiva dos seguidores de Cristo. Quando demonstramos amor genuíno, refletimos a natureza de Deus e damos evidência de nosso relacionamento com Ele.",
+    order: 10
   }
 ];
 

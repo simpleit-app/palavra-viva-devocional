@@ -41,7 +41,7 @@ const StudyRoutePage: React.FC = () => {
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState('unread');
+  const [activeTab, setActiveTab] = useState<string>('unread');
   const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const location = useLocation();
   const hasTriggeredRefresh = useRef(false);
@@ -49,6 +49,16 @@ const StudyRoutePage: React.FC = () => {
   // Extract scrollToVerse from location state
   const locationState = location.state as LocationState;
   const scrollToVerseId = locationState?.scrollToVerse;
+
+  // Check for active tab preference from localStorage
+  useEffect(() => {
+    const savedTab = localStorage.getItem('activeStudyTab');
+    if (savedTab) {
+      setActiveTab(savedTab);
+      // Clear the saved tab preference
+      localStorage.removeItem('activeStudyTab');
+    }
+  }, []);
 
   useEffect(() => {
     if (currentUser && !dataLoaded) {
@@ -60,6 +70,11 @@ const StudyRoutePage: React.FC = () => {
   // Handle scrolling to a specific verse when it's specified in the location state
   useEffect(() => {
     if (scrollToVerseId && verseRefs.current[scrollToVerseId] && !loading) {
+      // If we're scrolling to a verse and it's in the read tab, switch to that tab
+      if (readVerses.includes(scrollToVerseId)) {
+        setActiveTab('read');
+      }
+      
       setTimeout(() => {
         verseRefs.current[scrollToVerseId]?.scrollIntoView({ 
           behavior: 'smooth', 
@@ -67,7 +82,7 @@ const StudyRoutePage: React.FC = () => {
         });
       }, 100);
     }
-  }, [scrollToVerseId, loading]);
+  }, [scrollToVerseId, loading, readVerses]);
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -111,7 +126,8 @@ const StudyRoutePage: React.FC = () => {
           currentUser.totalReflections !== formattedReflections.length) {
         await updateProfile({
           chaptersRead: verseIds.length,
-          totalReflections: formattedReflections.length
+          totalReflections: formattedReflections.length,
+          points: verseIds.length + (formattedReflections.length * 2)
         });
       }
       
@@ -208,11 +224,11 @@ const StudyRoutePage: React.FC = () => {
       setReadVerses(updatedReadVerses);
       
       // Update points
-      const points = (currentUser.chaptersRead || 0) + 1;
+      const points = updatedReadVerses.length + (reflections.length * 2);
       
       await updateProfile({
         chaptersRead: updatedReadVerses.length,
-        points: points + (currentUser.totalReflections * 2)
+        points: points
       });
       
       // Switch to read tab when a verse is marked as read
@@ -295,7 +311,7 @@ const StudyRoutePage: React.FC = () => {
         setReflections(updatedReflections);
         
         // Update points for new reflection
-        const points = (currentUser.chaptersRead || 0) + (updatedReflections.length * 2);
+        const points = readVerses.length + (updatedReflections.length * 2);
         
         await updateProfile({
           totalReflections: updatedReflections.length,
@@ -376,7 +392,7 @@ const StudyRoutePage: React.FC = () => {
   };
 
   // Filter verses based on read status
-  const availableVerses = isPro ? bibleVerses : bibleVerses.slice(0, FREE_PLAN_VERSE_LIMIT);
+  const availableVerses = isPro ? bibleVerses : bibleVerses.slice(0, FREE_PLAN_VERSE_LIMIT + 3); // Expanded to ensure enough unread verses
   
   // Separate verses into read and unread
   const readVersesData = availableVerses.filter(verse => readVerses.includes(verse.id));
@@ -384,17 +400,17 @@ const StudyRoutePage: React.FC = () => {
   
   // If there are no unread verses, add some back from the Bible data
   if (unreadVersesData.length === 0) {
-    // Add the first verse that's not in readVerses
-    for (const verse of bibleVerses) {
-      if (!readVerses.includes(verse.id)) {
-        unreadVersesData = [verse];
-        break;
-      }
-    }
+    // Get all verses that aren't in the current available verses (find new ones)
+    const additionalVerses = bibleVerses.filter(verse => 
+      !availableVerses.some(av => av.id === verse.id)
+    );
     
-    // If all verses have been read, recycle the first one
-    if (unreadVersesData.length === 0 && bibleVerses.length > 0) {
-      unreadVersesData = [bibleVerses[0]];
+    // If there are additional verses available, add up to 3 of them
+    if (additionalVerses.length > 0) {
+      unreadVersesData = additionalVerses.slice(0, 3);
+    } else {
+      // If all verses have been used, recycle some already read verses
+      unreadVersesData = bibleVerses.slice(0, 3);
     }
   }
 
