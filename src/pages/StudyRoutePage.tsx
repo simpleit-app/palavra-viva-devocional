@@ -65,12 +65,9 @@ const StudyRoutePage: React.FC = () => {
           behavior: 'smooth', 
           block: 'start' 
         });
-        // Set the active tab to the one containing the verse
-        const isRead = readVerses.includes(scrollToVerseId);
-        setActiveTab(isRead ? 'read' : 'unread');
       }, 100);
     }
-  }, [scrollToVerseId, loading, readVerses]);
+  }, [scrollToVerseId, loading]);
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -393,7 +390,7 @@ const StudyRoutePage: React.FC = () => {
         </Alert>
       )}
 
-      {hasReachedFreeLimit && !isPro && (
+      {hasReachedFreeLimit && (
         <div className="mb-6">
           <SubscriptionUpgrade />
         </div>

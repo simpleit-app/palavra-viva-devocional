@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserProfile } from '@/contexts/AuthContext';
+import { User } from '@/contexts/AuthContext';
 import { getLevelTitle } from '@/utils/achievementUtils';
 
 interface UserAvatarProps {
-  user: UserProfile;
+  user: User;
   showLevel?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   overrideUrl?: string | null;
@@ -35,7 +35,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     <div className="flex flex-col items-center">
       <div className="relative">
         <Avatar className={sizeClasses[size]}>
-          <AvatarImage src={overrideUrl || user.photoUrl} alt={user.name} />
+          <AvatarImage src={overrideUrl || user.photoURL} alt={user.name} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
         
