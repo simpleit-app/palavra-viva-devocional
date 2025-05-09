@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from "@/hooks/use-toast";
-import RankingPanel from '@/components/RankingPanel';
 
 const features = [
   {
@@ -151,7 +149,6 @@ const LandingPage: React.FC = () => {
             <a href="#features" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Recursos</a>
             <a href="#pricing" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Preços</a>
             <a href="#testimonials" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Depoimentos</a>
-            <a href="#ranking" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Ranking</a>
           </nav>
           
           {/* Mobile Menu Button */}
@@ -201,13 +198,6 @@ const LandingPage: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Depoimentos
-              </a>
-              <a 
-                href="#ranking" 
-                className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Ranking
               </a>
               <div className="flex flex-col gap-3 pt-2">
                 <Button asChild variant="outline" className="w-full" onClick={() => setMobileMenuOpen(false)}>
@@ -437,27 +427,6 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Ranking section moved before the call to action section */}
-      <section id="ranking" className="py-20 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
-              Ranking Global
-            </Badge>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-              Os melhores estudantes
-            </h2>
-            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Conheça os estudantes mais dedicados do Palavra Viva.
-            </p>
-          </div>
-          
-          <div className="max-w-md mx-auto">
-            <RankingPanel limit={10} variant="large" />
-          </div>
-        </div>
-      </section>
-
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <div className="bg-gradient-to-r from-celestial-300 to-primary p-8 sm:p-12 rounded-xl max-w-5xl mx-auto">
@@ -494,7 +463,6 @@ const LandingPage: React.FC = () => {
               <a href="#features" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Recursos</a>
               <a href="#pricing" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Preços</a>
               <a href="#testimonials" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Depoimentos</a>
-              <a href="#ranking" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Ranking</a>
               <Link to="/login" className="text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary transition">Entrar</Link>
             </nav>
           </div>

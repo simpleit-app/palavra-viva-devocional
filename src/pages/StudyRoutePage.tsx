@@ -65,9 +65,12 @@ const StudyRoutePage: React.FC = () => {
           behavior: 'smooth', 
           block: 'start' 
         });
+        // Set the active tab to the one containing the verse
+        const isRead = readVerses.includes(scrollToVerseId);
+        setActiveTab(isRead ? 'read' : 'unread');
       }, 100);
     }
-  }, [scrollToVerseId, loading]);
+  }, [scrollToVerseId, loading, readVerses]);
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -207,12 +210,8 @@ const StudyRoutePage: React.FC = () => {
       const updatedReadVerses = [...readVerses, verseId];
       setReadVerses(updatedReadVerses);
       
-      // Update points
-      const points = (currentUser.chaptersRead || 0) + 1;
-      
       await updateProfile({
-        chaptersRead: updatedReadVerses.length,
-        points: points + (currentUser.totalReflections * 2)
+        chaptersRead: updatedReadVerses.length
       });
       
       // Switch to read tab when a verse is marked as read
@@ -294,12 +293,8 @@ const StudyRoutePage: React.FC = () => {
         const updatedReflections = [...reflections, newReflection];
         setReflections(updatedReflections);
         
-        // Update points for new reflection
-        const points = (currentUser.chaptersRead || 0) + (updatedReflections.length * 2);
-        
         await updateProfile({
-          totalReflections: updatedReflections.length,
-          points: points
+          totalReflections: updatedReflections.length
         });
       }
       
@@ -347,14 +342,10 @@ const StudyRoutePage: React.FC = () => {
       const updatedReadVerses = readVerses.filter(v => v !== verseId);
       setReadVerses(updatedReadVerses);
       
-      // Update points
-      const points = updatedReadVerses.length + (updatedReflections.length * 2);
-      
       // Update profile statistics
       await updateProfile({
         chaptersRead: updatedReadVerses.length,
-        totalReflections: updatedReflections.length,
-        points: points
+        totalReflections: updatedReflections.length
       });
       
       // Switch to unread tab since verse is now unread
@@ -380,28 +371,7 @@ const StudyRoutePage: React.FC = () => {
   
   // Separate verses into read and unread
   const readVersesData = availableVerses.filter(verse => readVerses.includes(verse.id));
-  let unreadVersesData = availableVerses.filter(verse => !readVerses.includes(verse.id));
-  
-  // If there are no unread verses, add some back from the Bible data
-  if (unreadVersesData.length === 0) {
-    // Add the first verse that's not in readVerses
-    for (const verse of bibleVerses) {
-      if (!readVerses.includes(verse.id)) {
-        unreadVersesData = [verse];
-        break;
-      }
-    }
-    
-    // If all verses have been read, recycle the first one
-    if (unreadVersesData.length === 0 && bibleVerses.length > 0) {
-      unreadVersesData = [bibleVerses[0]];
-    }
-  }
-
-  // Count verses read without reflections
-  const versesWithoutReflection = readVersesData.filter(verse => 
-    !reflections.some(reflection => reflection.verseId === verse.id)
-  ).length;
+  const unreadVersesData = availableVerses.filter(verse => !readVerses.includes(verse.id));
 
   const hasReachedFreeLimit = !isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT;
 
@@ -423,19 +393,10 @@ const StudyRoutePage: React.FC = () => {
         </Alert>
       )}
 
-      {hasReachedFreeLimit && (
+      {hasReachedFreeLimit && !isPro && (
         <div className="mb-6">
           <SubscriptionUpgrade />
         </div>
-      )}
-
-      {versesWithoutReflection > 0 && (
-        <Alert className="mb-6 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
-          <InfoIcon className="h-4 w-4 mr-2 text-amber-500" />
-          <AlertDescription className="text-amber-800 dark:text-amber-300">
-            Você tem {versesWithoutReflection} versículo(s) lido(s) sem reflexão. Adicione suas reflexões para ganhar mais pontos!
-          </AlertDescription>
-        </Alert>
       )}
 
       {loading ? (
@@ -495,8 +456,6 @@ const StudyRoutePage: React.FC = () => {
                 const userReflection = reflections.find(
                   (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
                 );
-                
-                const needsReflection = !userReflection;
 
                 return (
                   <div 
@@ -504,11 +463,6 @@ const StudyRoutePage: React.FC = () => {
                     ref={el => verseRefs.current[verse.id] = el}
                     className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
                   >
-                    {needsReflection && (
-                      <div className="mb-1 px-4 py-1 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-xs rounded-md border border-amber-200 dark:border-amber-800">
-                        Adicione sua reflexão para ganhar mais pontos
-                      </div>
-                    )}
                     <BibleVerseCard
                       verse={mapToBibleVerseCardType(verse)}
                       isRead={true}

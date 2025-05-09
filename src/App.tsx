@@ -17,11 +17,15 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import AdminCreator from "./components/AdminCreator";
+import RankingPanel from "./components/RankingPanel";
 
 // Wrap LandingPage with RankingPanel
 const EnhancedLandingPage = () => (
   <div>
     <LandingPage />
+    <div className="container max-w-md mx-auto my-12">
+      <RankingPanel limit={5} />
+    </div>
   </div>
 );
 
