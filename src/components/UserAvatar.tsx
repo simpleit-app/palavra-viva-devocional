@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from '@/contexts/AuthContext';
+import { UserProfile } from '@/contexts/AuthContext';
 import { getLevelTitle } from '@/utils/achievementUtils';
 
 interface UserAvatarProps {
-  user: User;
+  user: UserProfile;
   showLevel?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   overrideUrl?: string | null;

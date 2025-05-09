@@ -6,6 +6,7 @@ import ProgressBar from './ProgressBar';
 import { Achievement } from '@/data/bibleData';
 import { calculateProgress } from '@/utils/achievementUtils';
 import * as LucideIcons from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface AchievementCardProps {
   achievement: Achievement;
@@ -49,7 +50,12 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
           <IconComponent className="h-5 w-5" />
         </div>
         <div className="flex-1">
-          <h3 className="font-medium">{achievement.title}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium">{achievement.title}</h3>
+            {achievement.proPlan && (
+              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">PRO</Badge>
+            )}
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">{achievement.description}</p>
         </div>
       </CardHeader>

@@ -1,42 +1,14 @@
 
 project_id = "mcoeiucylazrjvhaemmc"
-
 [api]
 enabled = true
-port = 54321
-schemas = ["public", "storage"]
-
 [db]
-port = 54322
-
+enabled = true
 [realtime]
 enabled = true
-
-[studio]
-enabled = true
-port = 54323
-
-[inbucket]
-enabled = true
-port = 54324
-
 [storage]
 enabled = true
-
 [edge_functions]
 enabled = true
-
-[auth]
-enabled = true
-email = ["en", "pt"]
-
-# Add specific configuration for the create-checkout function
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.customer-portal]
-verify_jwt = true
-
-# Add configuration for the create-admin function
-[functions.create-admin]
+[functions.fetch_user_rankings]
 verify_jwt = false

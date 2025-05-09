@@ -1,32 +1,39 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ExternalLink, Loader2, CreditCard } from 'lucide-react';
+import { ExternalLink, Loader2, CreditCard, TagIcon } from 'lucide-react';
 
 interface SubscriptionUpgradeProps {
   variant?: 'default' | 'inline' | 'card';
   showFeatures?: boolean;
+  className?: string;
 }
 
 const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({ 
   variant = 'default',
-  showFeatures = true 
+  showFeatures = true,
+  className = ''
 }) => {
   const { currentUser, refreshSubscription, isPro } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [portalLoading, setPortalLoading] = React.useState(false);
+  const [couponCode, setCouponCode] = React.useState('');
+  const [couponError, setCouponError] = React.useState('');
 
   const handleUpgrade = async () => {
     if (!currentUser) return;
     
     setLoading(true);
+    setCouponError('');
     
     try {
       const session = await supabase.auth.getSession();
@@ -36,10 +43,13 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
         throw new Error("Usuário não autenticado");
       }
       
+      // Make sure to pass the coupon code in the request body
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        body: couponCode ? { couponCode } : undefined,
+        method: 'POST',
       });
       
       if (error) {
@@ -54,11 +64,22 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
       
     } catch (error: any) {
       console.error("Error starting checkout:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao iniciar checkout",
-        description: error.message || "Ocorreu um erro ao iniciar o checkout. Tente novamente mais tarde.",
-      });
+      
+      // Check if the error is related to the coupon code
+      if (error.message?.includes('coupon')) {
+        setCouponError('Cupom inválido ou expirado');
+        toast({
+          variant: "destructive",
+          title: "Erro no cupom",
+          description: error.message || "O cupom informado é inválido ou expirado.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao iniciar checkout",
+          description: error.message || "Ocorreu um erro ao iniciar o checkout. Tente novamente mais tarde.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -105,10 +126,40 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     }
   };
 
+  // Coupon input field component
+  const CouponInput = () => {
+    if (isPro) return null;
+    
+    return (
+      <div className="space-y-2 mb-4">
+        <Label htmlFor="coupon-code">Possui um cupom?</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="coupon-code"
+            placeholder="Digite o código do cupom"
+            value={couponCode}
+            onChange={(e) => {
+              setCouponCode(e.target.value);
+              setCouponError('');
+            }}
+            className={couponError ? "border-destructive" : ""}
+          />
+        </div>
+        {couponError && (
+          <p className="text-xs text-destructive">{couponError}</p>
+        )}
+      </div>
+    );
+  };
+
   // For inline variant, render just a button
   if (variant === 'inline') {
     return (
-      <div className="w-full space-y-2">
+      <div className={`w-full space-y-2 ${className}`}>
+        {!isPro && (
+          <CouponInput />
+        )}
+        
         <Button 
           onClick={handleUpgrade} 
           disabled={loading || isPro}
@@ -153,7 +204,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   // For card variant, render a full card with features
   if (variant === 'card') {
     return (
-      <Card className={isPro ? "border-primary/40 bg-primary/5" : ""}>
+      <Card className={`${isPro ? "border-primary/40 bg-primary/5" : ""} ${className}`}>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
@@ -187,6 +238,10 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
               <span>Recursos futuros exclusivos</span>
             </li>
           </ul>
+          
+          {!isPro && (
+            <CouponInput />
+          )}
           
           {isPro && currentUser?.subscriptionEnd && (
             <Alert className="mb-4">
@@ -241,7 +296,7 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   
   // Default variant with optional features
   return (
-    <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+    <div className={`p-4 border rounded-lg bg-slate-50 dark:bg-slate-900 ${className}`}>
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold">Plano Pro</h3>
@@ -265,6 +320,10 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
             <span>Acesso ao menu de Conquistas</span>
           </li>
         </ul>
+      )}
+      
+      {!isPro && (
+        <CouponInput />
       )}
       
       <div className="space-y-2">

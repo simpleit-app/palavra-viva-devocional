@@ -6,16 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [gender, setGender] = useState('male');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signInWithCredentials, signUp } = useAuth();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +29,9 @@ const LoginForm: React.FC = () => {
         if (!name) {
           throw new Error('Nome é obrigatório para criar uma conta');
         }
-        await signUp(name, email, password);
+        await signUp(email, password, name);
       } else {
-        await signInWithCredentials(email, password);
+        await signIn(email, password);
       }
     } catch (error: any) {
       console.error('Authentication error:', error);
@@ -53,17 +55,37 @@ const LoginForm: React.FC = () => {
       )}
       
       {isSignUp && (
-        <div className="space-y-2">
-          <Label htmlFor="name">Nome</Label>
-          <Input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Seu nome"
-            required={isSignUp}
-          />
-        </div>
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Seu nome"
+              required={isSignUp}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Sexo</Label>
+            <RadioGroup 
+              value={gender} 
+              onValueChange={setGender}
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="male" id="male" />
+                <Label htmlFor="male">Masculino</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="female" id="female" />
+                <Label htmlFor="female">Feminino</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </>
       )}
       
       <div className="space-y-2">
