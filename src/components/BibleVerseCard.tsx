@@ -50,11 +50,13 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   highlight = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showReflectionInput, setShowReflectionInput] = useState(isRead);
   const [reflectionText, setReflectionText] = useState(userReflection?.text || '');
   
   const handleSave = () => {
     onSaveReflection(verse.id, reflectionText);
     setIsEditing(false);
+    setShowReflectionInput(true);
   };
 
   const handleDelete = () => {
@@ -80,15 +82,29 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
             )}
           </div>
           {!isRead && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => onMarkAsRead(verse.id)}
-              className="flex items-center gap-1"
-            >
-              <BookOpen className="h-4 w-4" /> 
-              Marcar como lido
-            </Button>
+            <div className="flex items-center gap-2">
+              {!showReflectionInput && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setShowReflectionInput(true)}
+                  className="flex items-center gap-1"
+                >
+                  <Edit className="h-4 w-4" /> 
+                  Adicionar reflexão
+                </Button>
+              )}
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => onMarkAsRead(verse.id)}
+                className="flex items-center gap-1"
+                disabled={!reflectionText.trim()}
+              >
+                <BookOpen className="h-4 w-4" /> 
+                Marcar como lido
+              </Button>
+            </div>
           )}
         </CardTitle>
       </CardHeader>
@@ -148,7 +164,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
           </div>
         )}
         
-        {(isEditing || (!userReflection && isRead)) && (
+        {(isEditing || (!userReflection && showReflectionInput)) && (
           <div className="mt-4 border-t pt-4">
             <h4 className="text-sm font-medium mb-2">Sua reflexão</h4>
             <Textarea
@@ -159,7 +175,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
               className="mb-2"
             />
             <div className="flex justify-end gap-2">
-              {isEditing && (
+              {isEditing ? (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -167,6 +183,14 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                     setIsEditing(false);
                     setReflectionText(userReflection?.text || '');
                   }}
+                >
+                  Cancelar
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowReflectionInput(false)}
                 >
                   Cancelar
                 </Button>

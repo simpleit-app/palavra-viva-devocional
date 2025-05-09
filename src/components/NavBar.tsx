@@ -1,17 +1,19 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import UserAvatar from './UserAvatar';
-import { Moon, Sun, Menu, X, UserCircle, BookOpen } from 'lucide-react';
+import { Moon, Sun, Menu, X, UserCircle, BookOpen, LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from '@/contexts/ThemeContext';
+import { toast } from '@/components/ui/use-toast';
 
 const NavBar: React.FC = () => {
   const { currentUser, signOut, isPro } = useAuth();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   if (!currentUser) return null;
@@ -32,6 +34,24 @@ const NavBar: React.FC = () => {
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+      toast({
+        title: "Logout realizado",
+        description: "Você saiu da aplicação com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao sair",
+        description: "Não foi possível fazer logout. Tente novamente.",
+      });
+    }
   };
 
   return (
@@ -82,7 +102,13 @@ const NavBar: React.FC = () => {
                 {currentUser.name.split(' ')[0]}
               </span>
             </Link>
-            <Button variant="outline" size="sm" onClick={signOut}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLogout}
+              className="flex items-center gap-1"
+            >
+              <LogOut className="h-4 w-4" />
               Sair
             </Button>
           </div>
@@ -148,12 +174,13 @@ const NavBar: React.FC = () => {
                 <div className="mt-auto pt-6">
                   <Button 
                     variant="outline" 
-                    className="w-full" 
+                    className="w-full flex items-center gap-2" 
                     onClick={() => {
-                      signOut();
+                      handleLogout();
                       setIsMenuOpen(false);
                     }}
                   >
+                    <LogOut className="h-4 w-4" />
                     Sair
                   </Button>
                 </div>

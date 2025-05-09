@@ -106,7 +106,7 @@ const StudyRoutePage: React.FC = () => {
       
       setReflections(formattedReflections);
       
-      // Só atualiza o perfil se realmente precisa para evitar atualizações em cascata
+      // Update profile only if needed to avoid cascade updates
       if (currentUser.chaptersRead !== verseIds.length || 
           currentUser.totalReflections !== formattedReflections.length) {
         await updateProfile({
@@ -162,12 +162,12 @@ const StudyRoutePage: React.FC = () => {
         needsUpdate = true;
       }
       
-      // Só atualiza se realmente houver mudança no consecutive_days
+      // Update only if consecutive_days changed
       if (needsUpdate) {
         await updateProfile({ consecutiveDays: newStreak });
       }
       
-      // Atualiza o last_access apenas se for um dia diferente
+      // Update last_access only if it's a different day
       if (lastAccess.getTime() !== today.getTime()) {
         await supabase
           .from('profiles')
@@ -195,6 +195,20 @@ const StudyRoutePage: React.FC = () => {
     }
     
     try {
+      // First, check if there's a reflection for this verse (now required)
+      const userReflection = reflections.find(
+        (ref) => ref.verseId === verseId && ref.userId === currentUser.id
+      );
+      
+      if (!userReflection) {
+        toast({
+          variant: "destructive",
+          title: "Reflexão necessária",
+          description: "Adicione uma reflexão antes de marcar o versículo como lido.",
+        });
+        return;
+      }
+      
       const { error } = await supabase
         .from('read_verses')
         .insert({
@@ -207,9 +221,11 @@ const StudyRoutePage: React.FC = () => {
       const updatedReadVerses = [...readVerses, verseId];
       setReadVerses(updatedReadVerses);
       
-      await updateProfile({
+      const pointsUpdate = {
         chaptersRead: updatedReadVerses.length
-      });
+      };
+      
+      await updateProfile(pointsUpdate);
       
       // Switch to read tab when a verse is marked as read
       setActiveTab('read');
