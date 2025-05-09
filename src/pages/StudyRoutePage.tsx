@@ -11,7 +11,6 @@ import { UserReflection } from '@/data/bibleData';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Define a type for the location state
 interface LocationState {
@@ -27,7 +26,6 @@ const StudyRoutePage: React.FC = () => {
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState('unread');
   const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const location = useLocation();
   const hasTriggeredRefresh = useRef(false);
@@ -166,6 +164,7 @@ const StudyRoutePage: React.FC = () => {
     }
   };
 
+  // Restante do código do componente permanece igual...
   const handleMarkAsRead = async (verseId: string) => {
     if (!currentUser) return;
     if (readVerses.includes(verseId)) return;
@@ -196,9 +195,6 @@ const StudyRoutePage: React.FC = () => {
       await updateProfile({
         chaptersRead: updatedReadVerses.length
       });
-      
-      // Switch to read tab when a verse is marked as read
-      setActiveTab('read');
       
       toast({
         title: "Versículo marcado como lido!",
@@ -296,65 +292,10 @@ const StudyRoutePage: React.FC = () => {
     }
   };
 
-  const handleDeleteReflection = async (reflectionId: string, verseId: string) => {
-    if (!currentUser) return;
-    
-    try {
-      // Delete the reflection
-      const { error: reflectionError } = await supabase
-        .from('reflections')
-        .delete()
-        .eq('id', reflectionId)
-        .eq('user_id', currentUser.id);
-        
-      if (reflectionError) throw reflectionError;
-      
-      // Remove the verse from read verses
-      const { error: readVerseError } = await supabase
-        .from('read_verses')
-        .delete()
-        .eq('verse_id', verseId)
-        .eq('user_id', currentUser.id);
-        
-      if (readVerseError) throw readVerseError;
-      
-      // Update local state
-      const updatedReflections = reflections.filter(ref => ref.id !== reflectionId);
-      setReflections(updatedReflections);
-      
-      const updatedReadVerses = readVerses.filter(v => v !== verseId);
-      setReadVerses(updatedReadVerses);
-      
-      // Update profile statistics
-      await updateProfile({
-        chaptersRead: updatedReadVerses.length,
-        totalReflections: updatedReflections.length
-      });
-      
-      // Switch to unread tab since verse is now unread
-      setActiveTab('unread');
-      
-      toast({
-        title: "Reflexão excluída",
-        description: "A reflexão foi removida e o versículo marcado como não lido.",
-      });
-      
-    } catch (error) {
-      console.error("Error deleting reflection:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir a reflexão.",
-      });
-    }
-  };
-
-  // Filter verses based on read status
-  const availableVerses = isPro ? bibleVerses : bibleVerses.slice(0, FREE_PLAN_VERSE_LIMIT);
-  
-  // Separate verses into read and unread
-  const readVersesData = availableVerses.filter(verse => readVerses.includes(verse.id));
-  const unreadVersesData = availableVerses.filter(verse => !readVerses.includes(verse.id));
+  // Filter verses for free tier users
+  const displayVerses = isPro 
+    ? bibleVerses 
+    : bibleVerses.slice(0, FREE_PLAN_VERSE_LIMIT);
 
   const hasReachedFreeLimit = !isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT;
 
@@ -387,88 +328,39 @@ const StudyRoutePage: React.FC = () => {
           <p className="text-muted-foreground mb-4">Carregando seu progresso...</p>
         </div>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="my-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="unread" className="flex gap-2">
-              Não Lidos <span className="bg-background text-primary px-2 rounded-full text-xs">{unreadVersesData.length}</span>
-            </TabsTrigger>
-            <TabsTrigger value="read" className="flex gap-2">
-              Lidos <span className="bg-background text-primary px-2 rounded-full text-xs">{readVersesData.length}</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="unread" className="mt-6 space-y-6">
-            {unreadVersesData.length === 0 ? (
-              <div className="text-center py-8 border rounded-lg">
-                <p className="text-muted-foreground">Não há versículos não lidos disponíveis.</p>
+        <div className="my-6">
+          {displayVerses.map((verse) => {
+            const isRead = readVerses.includes(verse.id);
+            const userReflection = reflections.find(
+              (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
+            );
+
+            return (
+              <div 
+                key={verse.id}
+                ref={el => verseRefs.current[verse.id] = el}
+                className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
+              >
+                <BibleVerseCard
+                  verse={verse}
+                  isRead={isRead}
+                  userReflection={userReflection}
+                  onMarkAsRead={handleMarkAsRead}
+                  onSaveReflection={handleSaveReflection}
+                  highlight={scrollToVerseId === verse.id}
+                />
               </div>
-            ) : (
-              unreadVersesData.map((verse) => {
-                const userReflection = reflections.find(
-                  (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
-                );
-
-                return (
-                  <div 
-                    key={verse.id}
-                    ref={el => verseRefs.current[verse.id] = el}
-                    className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
-                  >
-                    <BibleVerseCard
-                      verse={verse}
-                      isRead={false}
-                      userReflection={userReflection}
-                      onMarkAsRead={handleMarkAsRead}
-                      onSaveReflection={handleSaveReflection}
-                      onDeleteReflection={handleDeleteReflection}
-                      highlight={scrollToVerseId === verse.id}
-                    />
-                  </div>
-                );
-              })
-            )}
-          </TabsContent>
+            );
+          })}
           
-          <TabsContent value="read" className="mt-6 space-y-6">
-            {readVersesData.length === 0 ? (
-              <div className="text-center py-8 border rounded-lg">
-                <p className="text-muted-foreground">Você ainda não leu nenhum versículo.</p>
-              </div>
-            ) : (
-              readVersesData.map((verse) => {
-                const userReflection = reflections.find(
-                  (ref) => ref.verseId === verse.id && ref.userId === currentUser.id
-                );
-
-                return (
-                  <div 
-                    key={verse.id}
-                    ref={el => verseRefs.current[verse.id] = el}
-                    className={scrollToVerseId === verse.id ? "scroll-mt-20" : ""}
-                  >
-                    <BibleVerseCard
-                      verse={verse}
-                      isRead={true}
-                      userReflection={userReflection}
-                      onMarkAsRead={handleMarkAsRead}
-                      onSaveReflection={handleSaveReflection}
-                      onDeleteReflection={handleDeleteReflection}
-                      highlight={scrollToVerseId === verse.id}
-                    />
-                  </div>
-                );
-              })
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
-
-      {!isPro && bibleVerses.length > FREE_PLAN_VERSE_LIMIT && (
-        <div className="mt-8 text-center">
-          <p className="text-muted-foreground mb-4">
-            Atualize para o plano Pro para acessar {bibleVerses.length - FREE_PLAN_VERSE_LIMIT} textos adicionais.
-          </p>
-          <SubscriptionUpgrade variant="inline" />
+          {!isPro && bibleVerses.length > FREE_PLAN_VERSE_LIMIT && (
+            <div className="mt-8 text-center">
+              <p className="text-muted-foreground mb-4">
+                Atualize para o plano Pro para acessar {bibleVerses.length - FREE_PLAN_VERSE_LIMIT} textos adicionais.
+              </p>
+              <SubscriptionUpgrade variant="inline" />
+            </div>
+          )}
         </div>
       )}
     </div>
