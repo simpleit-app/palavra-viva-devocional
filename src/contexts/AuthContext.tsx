@@ -16,6 +16,9 @@ export type User = {
   createdAt: Date;
   subscriptionTier: string;
   subscriptionEnd: Date | null;
+  nickname: string;
+  gender: string;
+  points: number;
 };
 
 // Define the AuthContextType
@@ -24,7 +27,7 @@ type AuthContextType = {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithCredentials: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, gender: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -65,6 +68,9 @@ const formatUser = (user: SupabaseUser | null, profileData: any, subscriptionDat
     createdAt: new Date(profileData.created_at),
     subscriptionTier: subscriptionData?.subscription_tier || 'free',
     subscriptionEnd: subscriptionData?.subscription_end ? new Date(subscriptionData.subscription_end) : null,
+    nickname: profileData.nickname || '',
+    gender: profileData.gender || 'male',
+    points: profileData.points || 0,
   };
 };
 
@@ -217,7 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Sign up with email/password
-  const signUp = async (name: string, email: string, password: string) => {
+  const signUp = async (name: string, email: string, password: string, gender: string) => {
     setLoading(true);
     
     try {
@@ -227,6 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name,
+            gender
           }
         }
       });
@@ -252,6 +259,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) throw error;
+      
+      // Ensure the browser redirects to the dashboard on successful login
+      if (data.session) {
+        window.location.href = '/dashboard';
+      }
       
     } catch (error) {
       console.error("Error signing in:", error);
@@ -298,6 +310,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.totalReflections !== undefined) profileData.total_reflections = data.totalReflections;
       if (data.chaptersRead !== undefined) profileData.chapters_read = data.chaptersRead;
       if (data.consecutiveDays !== undefined) profileData.consecutive_days = data.consecutiveDays;
+      if (data.points !== undefined) profileData.points = data.points;
+      if (data.nickname !== undefined) profileData.nickname = data.nickname;
       
       const { error } = await supabase
         .from('profiles')
@@ -326,6 +340,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       setCurrentUser(null);
+      
+      // Redirect to login page after sign out
+      window.location.href = '/login';
       
     } catch (error) {
       console.error("Error signing out:", error);

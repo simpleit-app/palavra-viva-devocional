@@ -17,6 +17,17 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import AdminCreator from "./components/AdminCreator";
+import RankingPanel from "./components/RankingPanel";
+
+// Wrap LandingPage with RankingPanel
+const EnhancedLandingPage = () => (
+  <div>
+    <LandingPage />
+    <div className="container max-w-md mx-auto my-12">
+      <RankingPanel limit={5} />
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -30,7 +41,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<EnhancedLandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/upgrade-pro" element={<AdminCreator />} />
               
@@ -90,6 +101,10 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* Redirect for Index.tsx which had unneeded redirects */}
+              <Route path="/index" element={<Navigate to="/" replace />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

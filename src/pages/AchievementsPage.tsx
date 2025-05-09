@@ -9,6 +9,7 @@ import { getLevelTitle, calculateUnlockedAchievements } from '@/utils/achievemen
 import ProgressBar from '@/components/ProgressBar';
 import UserAvatar from '@/components/UserAvatar';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
+import RankingPanel from '@/components/RankingPanel';
 
 const AchievementsPage: React.FC = () => {
   const { currentUser, isPro } = useAuth();
@@ -31,7 +32,7 @@ const AchievementsPage: React.FC = () => {
   // Calculate points for next level
   const currentLevelPoints = (currentUser.level - 1) * 10;
   const nextLevelPoints = currentUser.level * 10;
-  const currentPoints = currentUser.chaptersRead + currentUser.totalReflections * 2;
+  const currentPoints = currentUser.points || (currentUser.chaptersRead + currentUser.totalReflections * 2);
   const pointsForNextLevel = nextLevelPoints - currentPoints;
 
   return (
@@ -111,6 +112,11 @@ const AchievementsPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <h3 className="text-lg font-medium mb-4">Ranking de Usuários</h3>
+      <div className="mb-8">
+        <RankingPanel variant="large" limit={10} />
+      </div>
 
       <h3 className="text-lg font-medium mb-4">Minhas Medalhas</h3>
       
