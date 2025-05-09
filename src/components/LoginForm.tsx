@@ -17,7 +17,7 @@ const LoginForm: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signInWithCredentials, signUp } = useAuth();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +29,9 @@ const LoginForm: React.FC = () => {
         if (!name) {
           throw new Error('Nome é obrigatório para criar uma conta');
         }
-        await signUp(name, email, password, gender);
+        await signUp(email, password, name);
       } else {
-        await signInWithCredentials(email, password);
+        await signIn(email, password);
       }
     } catch (error: any) {
       console.error('Authentication error:', error);

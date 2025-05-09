@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 
@@ -18,19 +18,15 @@ export interface UserProfile {
   nickname: string | null;
 }
 
-export type User = UserProfile;
-
-type ProfileUpdate = Partial<Omit<UserProfile, 'id' | 'email'>>;
-
 interface AuthContextProps {
   isAuthenticated: boolean;
   isPro: boolean;
   isLoading: boolean;
-  currentUser: User | null;
+  currentUser: UserProfile | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (data: ProfileUpdate) => Promise<void>;
+  updateProfile: (data: Partial<Omit<UserProfile, 'id' | 'email'>>) => Promise<void>;
   accessCustomerPortal: () => Promise<string>;
 }
 
@@ -39,7 +35,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isPro, setIsPro] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -203,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (data: ProfileUpdate) => {
+  const updateProfile = async (data: Partial<Omit<UserProfile, 'id' | 'email'>>) => {
     if (!currentUser) return;
 
     try {

@@ -17,7 +17,6 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import AdminCreator from "./components/AdminCreator";
-import RankingPanel from "./components/RankingPanel";
 
 // Wrap LandingPage with RankingPanel
 const EnhancedLandingPage = () => (
@@ -29,10 +28,10 @@ const EnhancedLandingPage = () => (
 const queryClient = new QueryClient();
 
 const App = () => (
-  <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
+      <TooltipProvider>
+        <BrowserRouter>
           <AuthProvider>
             <Toaster />
             <Sonner />
@@ -105,10 +104,10 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  </BrowserRouter>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
 );
 
 export default App;

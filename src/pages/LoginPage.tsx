@@ -7,9 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import DailyVerse from '@/components/DailyVerse';
 
 const LoginPage: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex justify-center items-center">
         <div className="animate-pulse text-center">
