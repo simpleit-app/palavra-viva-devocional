@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -111,7 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         consecutiveDays: data.consecutive_days,
         points: data.points,
         nickname: data.nickname,
-        subscriptionEnd: data.subscription_end // Add subscriptionEnd
+        // Handle the subscription_end field which may not exist in the profile table
+        // We'll use null as a fallback
+        subscriptionEnd: data.subscription_end || null
       });
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
