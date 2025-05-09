@@ -29,7 +29,7 @@ const LoginForm: React.FC = () => {
         if (!name) {
           throw new Error('Nome é obrigatório para criar uma conta');
         }
-        await signUp(email, password, name);
+        await signUp(name, email, password, gender);
       } else {
         await signIn(email, password);
       }

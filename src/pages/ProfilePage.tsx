@@ -1,368 +1,439 @@
-
-import React, { useState } from 'react';
-import { useAuth, UserProfile } from '@/contexts/AuthContext';
-import PageTitle from '@/components/PageTitle';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, CreditCard, LogOut } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
-import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import PageTitle from '@/components/PageTitle';
 import UserAvatar from '@/components/UserAvatar';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Pencil, Upload, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
-
-interface UserTestimonial {
-  id?: string;
-  quote: string;
-  author_role: string;
-}
+import UserTestimonial from '@/components/UserTestimonial';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 const ProfilePage: React.FC = () => {
-  const { currentUser, updateProfile, signOut, isPro, accessCustomerPortal } = useAuth();
-  const [isUpdating, setIsUpdating] = useState(false);
+  const { currentUser, updateProfile, refreshSubscription, isPro } = useAuth();
   const [name, setName] = useState(currentUser?.name || '');
-  const [photoURL, setPhotoURL] = useState(currentUser?.photoURL || '');
-  const [testimonial, setTestimonial] = useState<UserTestimonial>({
-    quote: '',
-    author_role: ''
-  });
-  const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
-  const [loadingPortal, setLoadingPortal] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [availableNicknames, setAvailableNicknames] = useState<string[]>([]);
+  const [selectedNickname, setSelectedNickname] = useState(currentUser?.nickname || '');
+  const [loadingNicknames, setLoadingNicknames] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentUser) {
-      setName(currentUser.name);
-      setPhotoURL(currentUser.photoURL || '');
-      fetchUserTestimonial();
+      fetchAvailableNicknames();
     }
   }, [currentUser]);
 
-  const fetchUserTestimonial = async () => {
-    if (!currentUser) return;
-    
+  const fetchAvailableNicknames = async () => {
+    setLoadingNicknames(true);
     try {
-      const { data, error } = await supabase
-        .from('user_testimonials')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-        
-      if (error) throw error;
-      
-      if (data) {
-        setTestimonial({
-          id: data.id,
-          quote: data.quote,
-          author_role: data.author_role || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching testimonial:', error);
-    }
-  };
+      // Get biblical names that are not already used as nicknames
+      const { data: biblicalNames, error: biblicalNamesError } = await supabase
+        .from('biblical_names')
+        .select('name')
+        .order('name');
 
-  const handleUpdateProfile = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setIsUpdating(true);
-    
-    try {
-      await updateProfile({
-        name,
-        photoURL
-      });
-      
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
-      });
+      if (biblicalNamesError) throw biblicalNamesError;
+
+      const { data: usedNicknames, error: usedNicknamesError } = await supabase
+        .from('profiles')
+        .select('nickname')
+        .not('id', 'eq', currentUser.id)
+        .not('nickname', 'is', null);
+
+      if (usedNicknamesError) throw usedNicknamesError;
+
+      // Filter out already used nicknames
+      const usedNicknameSet = new Set(usedNicknames.map(p => p.nickname));
+      const availableNames = biblicalNames
+        .map(n => n.name)
+        .filter(name => !usedNicknameSet.has(name));
+
+      // Add current user's nickname if it exists
+      if (currentUser.nickname && !availableNames.includes(currentUser.nickname)) {
+        availableNames.unshift(currentUser.nickname);
+      }
+
+      setAvailableNicknames(availableNames);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Error fetching available nicknames:', error);
       toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível atualizar seu perfil.",
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível carregar os nomes bíblicos disponíveis.',
       });
     } finally {
-      setIsUpdating(false);
+      setLoadingNicknames(false);
     }
   };
 
-  const handleSubmitTestimonial = async (event: React.FormEvent) => {
-    event.preventDefault();
+  if (!currentUser) return null;
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (!testimonial.quote || !testimonial.author_role) {
+    if (!name.trim()) {
       toast({
         variant: "destructive",
-        title: "Campos incompletos",
-        description: "Por favor, preencha todos os campos.",
+        title: "Nome obrigatório",
+        description: "Por favor, preencha seu nome.",
       });
       return;
     }
     
-    setIsSubmittingTestimonial(true);
-    
     try {
-      if (testimonial.id) {
-        // Update existing testimonial
-        const { error } = await supabase
-          .from('user_testimonials')
-          .update({
-            quote: testimonial.quote,
-            author_role: testimonial.author_role,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', testimonial.id);
+      setLoading(true);
+      
+      let photoUrl = currentUser?.photoUrl;
+      
+      // Upload new avatar if selected
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${currentUser?.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        // First, delete existing files in the user's avatar folder
+        const { data: existingFiles, error: listError } = await supabase.storage
+          .from('avatars')
+          .list(currentUser?.id || '');
+        
+        if (listError) {
+          console.error('Error listing existing files:', listError);
+        } else if (existingFiles && existingFiles.length > 0) {
+          const filesToDelete = existingFiles.map(file => `${currentUser?.id}/${file.name}`);
+          const { error: deleteError } = await supabase.storage
+            .from('avatars')
+            .remove(filesToDelete);
           
-        if (error) throw error;
-      } else {
-        // Create new testimonial
-        const { error } = await supabase
-          .from('user_testimonials')
-          .insert({
-            user_id: currentUser!.id,
-            quote: testimonial.quote,
-            author_role: testimonial.author_role
+          if (deleteError) {
+            console.error('Error deleting existing files:', deleteError);
+          }
+        }
+        
+        // Upload the new file
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, avatarFile, {
+            upsert: true,
+            contentType: avatarFile.type
           });
-          
-        if (error) throw error;
+        
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw uploadError;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        photoUrl = publicUrl;
       }
       
-      toast({
-        title: "Depoimento enviado",
-        description: "Seu depoimento foi enviado para aprovação.",
+      // Update nickname directly in the database
+      if (selectedNickname !== currentUser.nickname) {
+        const { error: nicknameError } = await supabase
+          .from('profiles')
+          .update({ nickname: selectedNickname })
+          .eq('id', currentUser.id);
+          
+        if (nicknameError) throw nicknameError;
+      }
+      
+      // Update profile
+      await updateProfile({
+        name,
+        photoUrl,
+        nickname: selectedNickname,
       });
-    } catch (error) {
-      console.error('Error submitting testimonial:', error);
+      
+      await refreshSubscription();
+      
       toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível salvar seu depoimento.",
+        title: 'Perfil atualizado',
+        description: 'Suas informações foram atualizadas com sucesso.',
+      });
+      
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Não foi possível atualizar o perfil. Tente novamente.',
       });
     } finally {
-      setIsSubmittingTestimonial(false);
+      setLoading(false);
     }
   };
 
-  const handleManageSubscription = async () => {
-    setLoadingPortal(true);
-    try {
-      const portalUrl = await accessCustomerPortal();
-      window.location.href = portalUrl;
-    } catch (error) {
-      console.error('Error accessing customer portal:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível acessar o portal do cliente. Tente novamente mais tarde.",
-      });
-    } finally {
-      setLoadingPortal(false);
-    }
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric'
+    });
   };
 
-  if (!currentUser) {
-    return (
-      <div className="container py-8">
-        <div className="flex flex-col items-center justify-center h-[50vh]">
-          <Skeleton className="h-12 w-64 mb-4" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-      </div>
-    );
-  }
+  // Use current date if we don't have a creation date
+  const memberSinceDate = new Date();
 
   return (
-    <div className="container py-6 max-w-4xl px-4 md:px-6">
+    <div className="container max-w-4xl py-6 px-4 md:px-6">
       <PageTitle 
-        title="Meu Perfil" 
-        subtitle="Gerencie suas informações e preferências"
+        title="Meu Perfil"
+        subtitle="Visualize e edite suas informações pessoais."
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Informações</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center">
-              <UserAvatar user={currentUser} size="xl" overrideUrl={photoURL} />
-              <h3 className="text-xl font-bold mt-4">{currentUser.name}</h3>
-              <p className="text-muted-foreground">{currentUser.email}</p>
-              
-              <div className="w-full mt-6">
-                <div className="flex justify-between mb-2">
-                  <span>Nível</span>
-                  <span className="font-semibold">{currentUser.level}</span>
+      <div className="grid gap-6 md:grid-cols-2 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Pessoais</CardTitle>
+            <CardDescription>
+              Atualize suas informações de perfil
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/20">
+                    <UserAvatar 
+                      user={currentUser} 
+                      overrideUrl={avatarPreview} 
+                      showLevel={false} 
+                      size="xl" 
+                    />
+                  </div>
+                  <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white cursor-pointer rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Upload className="w-6 h-6" />
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                 </div>
-                <div className="flex justify-between mb-2">
-                  <span>Capítulos lidos</span>
-                  <span className="font-semibold">{currentUser.chaptersRead}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Reflexões</span>
-                  <span className="font-semibold">{currentUser.totalReflections}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Dias consecutivos</span>
-                  <span className="font-semibold">{currentUser.consecutiveDays}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Total de pontos</span>
-                  <span className="font-semibold">{currentUser.points}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Plano</span>
-                  <span className="font-semibold">{isPro ? "Pro" : "Gratuito"}</span>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Clique na imagem para alterar seu avatar
+                  </p>
                 </div>
               </div>
               
-              <div className="mt-6 w-full space-y-4">
-                {isPro ? (
-                  <Button 
-                    className="w-full" 
-                    variant="outline"
-                    onClick={handleManageSubscription}
-                    disabled={loadingPortal}
-                  >
-                    {loadingPortal ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                    Gerenciar Assinatura
-                  </Button>
-                ) : (
-                  <SubscriptionUpgrade variant="inline" />
-                )}
-                
-                <Button 
-                  className="w-full" 
-                  variant="outline" 
-                  onClick={signOut}
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <Pencil className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Nome Bíblico (Apelido)</Label>
+                <Select 
+                  value={selectedNickname} 
+                  onValueChange={setSelectedNickname}
+                  disabled={loadingNicknames}
                 >
-                  <LogOut className="h-4 w-4 mr-2" /> Sair
-                </Button>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um nome bíblico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableNicknames.map((nickname) => (
+                      <SelectItem key={nickname} value={nickname}>
+                        {nickname}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Este nome será exibido no ranking global
+                </p>
+              </div>
+
+              <Separator className="my-2" />
+              
+              <div className="space-y-2">
+                <Label>Sexo</Label>
+                <div className="text-sm">
+                  {currentUser.gender === 'male' ? 'Masculino' : 'Feminino'}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={currentUser.email}
+                  disabled
+                  className="bg-muted/50"
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Atualizando...
+                  </>
+                ) : (
+                  'Salvar Alterações'
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+        
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Estatísticas</CardTitle>
+              <CardDescription>
+                Seu progresso na jornada bíblica
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Textos Lidos</p>
+                  <p className="text-2xl font-semibold">{currentUser.chaptersRead}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Reflexões</p>
+                  <p className="text-2xl font-semibold">{currentUser.totalReflections}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Nível</p>
+                  <p className="text-2xl font-semibold">{currentUser.level}</p>
+                </div>
+                <div className="border rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Dias Consecutivos</p>
+                  <p className="text-2xl font-semibold">{currentUser.consecutiveDays}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Membro desde {formatDate(memberSinceDate.toISOString())}
+                </p>
               </div>
             </CardContent>
           </Card>
+          
+          <Card className={isPro ? "border-primary/40 bg-primary/5" : ""}>
+            <CardHeader>
+              <CardTitle>Plano Atual</CardTitle>
+              <CardDescription>
+                Informações da sua assinatura
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <p className="font-semibold text-xl">
+                    {isPro ? 'Plano Pro' : 'Plano Gratuito'}
+                  </p>
+                  {isPro && currentUser.subscriptionEnd && (
+                    <p className="text-sm text-muted-foreground">
+                      Expira em {formatDate(currentUser.subscriptionEnd)}
+                    </p>
+                  )}
+                </div>
+                {isPro ? (
+                  <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                    Ativo
+                  </span>
+                ) : (
+                  <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Limitado
+                  </span>
+                )}
+              </div>
+              
+              {!isPro && (
+                <div className="mt-4">
+                  <SubscriptionUpgrade variant="inline" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+      </div>
+      
+      <div className="mt-6 space-y-6">
+        <UserTestimonial />
         
-        <div className="md:col-span-2">
-          <Tabs defaultValue="account">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="account">Conta</TabsTrigger>
-              <TabsTrigger value="testimonial">Depoimento</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="account" className="pt-4">
-              <Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Planos Disponíveis</CardTitle>
+            <CardDescription>
+              Escolha o plano que melhor se adapta às suas necessidades
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className={!isPro ? "border-primary/40 bg-primary/5" : ""}>
                 <CardHeader>
-                  <CardTitle className="text-xl">Editar Perfil</CardTitle>
+                  <div className="flex justify-between">
+                    <CardTitle>Plano Gratuito</CardTitle>
+                    {!isPro && <span className="bg-primary/20 text-primary px-2 py-1 rounded-full text-xs font-medium">Seu Plano</span>}
+                  </div>
+                  <CardDescription>Acesso limitado</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleUpdateProfile}>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="display-name">Nome</Label>
-                        <Input
-                          id="display-name"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="photo-url">URL da foto de perfil</Label>
-                        <Input
-                          id="photo-url"
-                          value={photoURL || ''}
-                          onChange={(e) => setPhotoURL(e.target.value)}
-                          placeholder="https://exemplo.com/sua-foto.jpg"
-                        />
-                      </div>
-                      
-                      <div className="pt-4">
-                        <Button type="submit" disabled={isUpdating}>
-                          {isUpdating ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Atualizando...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="mr-2 h-4 w-4" />
-                              Salvar alterações
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </form>
+                  <ul className="space-y-2 my-4">
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Acesso a 2 textos bíblicos</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">✓</span>
+                      <span>Limite de 2 reflexões</span>
+                    </li>
+                    <li className="flex items-start text-muted-foreground">
+                      <span className="mr-2">✗</span>
+                      <span>Sem acesso às Conquistas</span>
+                    </li>
+                  </ul>
+                  <p className="font-semibold text-center">Gratuito</p>
                 </CardContent>
               </Card>
-            </TabsContent>
-            
-            <TabsContent value="testimonial" className="pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Compartilhe sua experiência</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmitTestimonial}>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="testimonial">Seu depoimento</Label>
-                        <Textarea
-                          id="testimonial"
-                          value={testimonial.quote}
-                          onChange={(e) => setTestimonial({...testimonial, quote: e.target.value})}
-                          placeholder="Conte como o Palavra Viva tem ajudado em sua jornada espiritual..."
-                          className="min-h-[120px]"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="role">Sua ocupação (opcional)</Label>
-                        <Input
-                          id="role"
-                          value={testimonial.author_role}
-                          onChange={(e) => setTestimonial({...testimonial, author_role: e.target.value})}
-                          placeholder="Ex: Pastor, Estudante, Professor, etc."
-                        />
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">
-                        Seu depoimento pode ser exibido na página inicial após aprovação.
-                      </p>
-                      
-                      <div className="pt-4">
-                        <Button type="submit" disabled={isSubmittingTestimonial}>
-                          {isSubmittingTestimonial ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Enviando...
-                            </>
-                          ) : testimonial.id ? (
-                            <>
-                              <Save className="mr-2 h-4 w-4" />
-                              Atualizar depoimento
-                            </>
-                          ) : (
-                            <>
-                              <Save className="mr-2 h-4 w-4" />
-                              Enviar depoimento
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+              
+              <SubscriptionUpgrade variant="card" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

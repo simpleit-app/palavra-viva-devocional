@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,8 +33,9 @@ const ReflectionsPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reflectionToDelete, setReflectionToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
+  // Fix: Only load reflections once when component mounts or when user changes
+  // Remove the refreshSubscription call that was causing the flickering
   useEffect(() => {
     if (currentUser) {
       loadReflections();
@@ -68,12 +67,8 @@ const ReflectionsPage: React.FC = () => {
       
       // Update user stats if needed
       if (currentUser.totalReflections !== formattedReflections.length) {
-        // Update points
-        const points = (currentUser.chaptersRead || 0) + (formattedReflections.length * 2);
-        
         await updateProfile({
-          totalReflections: formattedReflections.length,
-          points: points
+          totalReflections: formattedReflections.length
         });
       }
       
@@ -148,11 +143,6 @@ const ReflectionsPage: React.FC = () => {
     if (!reflectionToDelete) return;
     
     try {
-      // Find the reflection to delete to get its verseId
-      const reflectionToDeleteData = reflections.find(ref => ref.id === reflectionToDelete);
-      if (!reflectionToDeleteData) return;
-      
-      // Delete the reflection
       const { error } = await supabase
         .from('reflections')
         .delete()
@@ -169,13 +159,9 @@ const ReflectionsPage: React.FC = () => {
       setDeleteConfirmOpen(false);
       setReflectionToDelete(null);
       
-      // Update points
-      const points = (currentUser.chaptersRead || 0) + (updatedReflections.length * 2);
-      
       // Update user stats
       await updateProfile({
-        totalReflections: updatedReflections.length,
-        points: points
+        totalReflections: updatedReflections.length
       });
       
       toast({
@@ -211,18 +197,6 @@ const ReflectionsPage: React.FC = () => {
     } else {
       copyToClipboard(shareText);
     }
-  };
-
-  const handleViewFullStudy = (verseId: string) => {
-    // Set local storage to indicate we need to switch to the 'read' tab
-    localStorage.setItem('activeStudyTab', 'read');
-    
-    // Navigate to the study route with the verse ID in state
-    navigate('/study-route', { 
-      state: { 
-        scrollToVerse: verseId 
-      } 
-    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -324,10 +298,12 @@ const ReflectionsPage: React.FC = () => {
                     <Button 
                       variant="link" 
                       className="p-0 h-auto text-primary flex items-center gap-1"
-                      onClick={() => handleViewFullStudy(reflection.verseId)}
+                      asChild
                     >
-                      <BookOpen className="h-4 w-4" />
-                      <span>Ver texto de estudo completo</span>
+                      <Link to={`/study-route`} state={{ scrollToVerse: verse.id }}>
+                        <BookOpen className="h-4 w-4" />
+                        <span>Ver texto de estudo completo</span>
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>

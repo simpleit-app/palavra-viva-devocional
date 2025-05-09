@@ -35,7 +35,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     <div className="flex flex-col items-center">
       <div className="relative">
         <Avatar className={sizeClasses[size]}>
-          <AvatarImage src={overrideUrl || user.photoURL} alt={user.name} />
+          <AvatarImage src={overrideUrl || user.photoUrl} alt={user.name} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
         
