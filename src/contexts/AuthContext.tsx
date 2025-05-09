@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -16,7 +15,11 @@ export interface UserProfile {
   consecutiveDays: number;
   points: number;
   nickname: string | null;
+  subscriptionEnd?: string | null; // Add subscriptionEnd property
 }
+
+// Export UserProfile as User for backward compatibility
+export type User = UserProfile;
 
 interface AuthContextProps {
   isAuthenticated: boolean;
@@ -28,6 +31,7 @@ interface AuthContextProps {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Omit<UserProfile, 'id' | 'email'>>) => Promise<void>;
   accessCustomerPortal: () => Promise<string>;
+  refreshSubscription: () => Promise<void>; // Add refreshSubscription function
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -106,7 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         chaptersRead: data.chapters_read,
         consecutiveDays: data.consecutive_days,
         points: data.points,
-        nickname: data.nickname
+        nickname: data.nickname,
+        subscriptionEnd: data.subscription_end // Add subscriptionEnd
       });
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
@@ -125,10 +130,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setIsPro(response?.subscribed || false);
       
+      // Update currentUser with subscription end date if available
+      if (response?.subscription_end && currentUser) {
+        setCurrentUser(prev => prev ? {
+          ...prev,
+          subscriptionEnd: response.subscription_end
+        } : null);
+      }
+      
     } catch (error) {
       console.error('Error checking subscription status:', error);
       // In case of error, assume user is not Pro
       setIsPro(false);
+    }
+  };
+
+  // Add refreshSubscription function
+  const refreshSubscription = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      await checkSubscriptionStatus();
+      console.log('Subscription status refreshed');
+    } catch (error) {
+      console.error('Error refreshing subscription status:', error);
     }
   };
 
@@ -252,6 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         updateProfile,
         accessCustomerPortal,
+        refreshSubscription, // Add refreshSubscription to the context
       }}
     >
       {children}
