@@ -2,13 +2,32 @@
 project_id = "mcoeiucylazrjvhaemmc"
 [api]
 enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
 [db]
-enabled = true
-[realtime]
-enabled = true
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
 [storage]
 enabled = true
-[edge_functions]
+
+[auth]
 enabled = true
-[functions.fetch_user_rankings]
-verify_jwt = false
+site_url = "http://localhost:3000"
+
+[auth.email]
+enabled = true
+
+[realtime]
+enabled = true
+
+[functions.fix-user-stats]
+verify_jwt = true

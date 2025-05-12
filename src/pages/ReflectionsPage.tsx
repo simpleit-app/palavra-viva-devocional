@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
@@ -8,7 +7,7 @@ import { Edit2, Trash2, Share2, BookOpen, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Textarea } from '@/components/ui/textarea';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +33,7 @@ const ReflectionsPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reflectionToDelete, setReflectionToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Fix: Only load reflections once when component mounts or when user changes
   // Remove the refreshSubscription call that was causing the flickering
@@ -144,12 +144,28 @@ const ReflectionsPage: React.FC = () => {
     if (!reflectionToDelete) return;
     
     try {
-      const { error } = await supabase
+      // Get the verse_id before deleting the reflection
+      const reflection = reflections.find(r => r.id === reflectionToDelete);
+      if (!reflection) return;
+      
+      const verseId = reflection.verseId;
+      
+      // Delete the reflection
+      const { error: reflectionError } = await supabase
         .from('reflections')
         .delete()
         .eq('id', reflectionToDelete);
         
-      if (error) throw error;
+      if (reflectionError) throw reflectionError;
+      
+      // Remove the verse from read verses to mark it as unread
+      const { error: readVerseError } = await supabase
+        .from('read_verses')
+        .delete()
+        .eq('verse_id', verseId)
+        .eq('user_id', currentUser.id);
+        
+      if (readVerseError) throw readVerseError;
       
       // Update local state
       const updatedReflections = reflections.filter(
@@ -162,12 +178,13 @@ const ReflectionsPage: React.FC = () => {
       
       // Update user stats
       await updateProfile({
-        totalReflections: updatedReflections.length
+        totalReflections: updatedReflections.length,
+        chaptersRead: Math.max(0, currentUser.chaptersRead - 1) // Decrease chapters read count
       });
       
       toast({
         title: "Reflexão removida",
-        description: "Sua reflexão foi excluída com sucesso.",
+        description: "Sua reflexão foi excluída com sucesso e o versículo marcado como não lido.",
       });
       
     } catch (error) {
@@ -214,6 +231,10 @@ const ReflectionsPage: React.FC = () => {
         description: "Não foi possível copiar o texto.",
       });
     });
+  };
+
+  const navigateToStudyWithVerse = (verseId: string) => {
+    navigate('/study-route', { state: { scrollToVerse: verseId } });
   };
 
   const displayReflections = isPro 
@@ -299,12 +320,10 @@ const ReflectionsPage: React.FC = () => {
                     <Button 
                       variant="link" 
                       className="p-0 h-auto text-primary flex items-center gap-1"
-                      asChild
+                      onClick={() => navigateToStudyWithVerse(reflection.verseId)}
                     >
-                      <Link to={`/study-route`} state={{ scrollToVerse: reflection.verseId }}>
-                        <BookOpen className="h-4 w-4" />
-                        <span>Ver texto de estudo completo</span>
-                      </Link>
+                      <BookOpen className="h-4 w-4" />
+                      <span>Ver texto de estudo completo</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -371,7 +390,7 @@ const ReflectionsPage: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta reflexão? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta reflexão? Esta ação irá desmarcar o versículo como lido e não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

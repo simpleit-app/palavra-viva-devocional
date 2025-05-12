@@ -10,9 +10,10 @@ import ProgressBar from '@/components/ProgressBar';
 import UserAvatar from '@/components/UserAvatar';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 import RankingPanel from '@/components/RankingPanel';
+import FixUserStats from '@/components/FixUserStats';
 
 const AchievementsPage: React.FC = () => {
-  const { currentUser, isPro } = useAuth();
+  const { currentUser, isPro, refreshUser } = useAuth();
 
   if (!currentUser) return null;
 
@@ -107,6 +108,10 @@ const AchievementsPage: React.FC = () => {
                     <span>{currentPoints}</span>
                   </li>
                 </ul>
+              </div>
+              
+              <div className="flex justify-center">
+                <FixUserStats onComplete={refreshUser} />
               </div>
             </div>
           </div>

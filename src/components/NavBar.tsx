@@ -39,6 +39,7 @@ const NavBar: React.FC = () => {
   const handleLogout = async () => {
     try {
       await signOut();
+      // After signOut, navigate to login page
       navigate('/login');
       toast({
         title: "Logout realizado",
