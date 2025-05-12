@@ -17,17 +17,9 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import AdminCreator from "./components/AdminCreator";
-import RankingPanel from "./components/RankingPanel";
 
-// Wrap LandingPage with RankingPanel using functional composition
-const EnhancedLandingPage = () => (
-  <div>
-    <LandingPage />
-    <div className="container max-w-md mx-auto my-12">
-      <RankingPanel limit={5} />
-    </div>
-  </div>
-);
+// Use LandingPage directly without wrapper since RankingPanel is now within it
+const EnhancedLandingPage = () => <LandingPage />;
 
 // Create a new query client with error handling
 const queryClient = new QueryClient({

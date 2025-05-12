@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from "@/hooks/use-toast";
+import RankingPanel from '@/components/RankingPanel';
 
 const features = [
   {
@@ -150,6 +152,13 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800">
+      {/* Ranking Panel Section - Now above the header */}
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-4 border-b">
+        <div className="container max-w-md mx-auto">
+          <RankingPanel limit={5} />
+        </div>
+      </div>
+
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
