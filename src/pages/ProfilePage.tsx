@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,7 +104,7 @@ const ProfilePage: React.FC = () => {
     try {
       setLoading(true);
       
-      let photoURL = currentUser?.photoURL;
+      let photoUrl = currentUser?.photoUrl;
       
       // Upload new avatar if selected
       if (avatarFile) {
@@ -148,15 +147,15 @@ const ProfilePage: React.FC = () => {
           .from('avatars')
           .getPublicUrl(fileName);
         
-        photoURL = publicUrl;
+        photoUrl = publicUrl;
       }
       
       // Update nickname directly in the database
-      if (selectedNickname !== currentUser.nickname) {
+      if (selectedNickname !== currentUser?.nickname) {
         const { error: nicknameError } = await supabase
           .from('profiles')
           .update({ nickname: selectedNickname })
-          .eq('id', currentUser.id);
+          .eq('id', currentUser?.id || '');
           
         if (nicknameError) throw nicknameError;
       }
@@ -164,7 +163,7 @@ const ProfilePage: React.FC = () => {
       // Update profile
       await updateProfile({
         name,
-        photoURL,
+        photoUrl,
         nickname: selectedNickname,
       });
       
@@ -342,7 +341,7 @@ const ProfilePage: React.FC = () => {
               
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Membro desde {formatDate(currentUser.createdAt)}
+                  Membro desde {currentUser?.createdAt ? formatDate(currentUser.createdAt) : "-"}
                 </p>
               </div>
             </CardContent>
@@ -361,7 +360,7 @@ const ProfilePage: React.FC = () => {
                   <p className="font-semibold text-xl">
                     {isPro ? 'Plano Pro' : 'Plano Gratuito'}
                   </p>
-                  {isPro && currentUser.subscriptionEnd && (
+                  {isPro && currentUser?.subscriptionEnd && (
                     <p className="text-sm text-muted-foreground">
                       Expira em {formatDate(currentUser.subscriptionEnd)}
                     </p>

@@ -1,6 +1,5 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Auth, ThemeSupa } from '@supabase/auth-ui-react';
-import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,10 +16,15 @@ interface AuthContextType {
     points: number;
     nickname?: string;
     gender?: string;
+    subscriptionEnd?: Date;
+    createdAt?: Date;
   } | null;
   isPro: boolean;
+  isAuthenticated: boolean;
+  loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signInWithCredentials: (email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, gender?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<{
     name: string;
@@ -29,8 +33,10 @@ interface AuthContextType {
     chaptersRead: number;
     consecutiveDays: number;
     gender: string;
+    nickname: string;
   }>) => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<AuthContextType['currentUser']>(null);
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const router = typeof window !== 'undefined' ? useRouter() : null;
 
   useEffect(() => {
     const loadSession = async () => {
@@ -91,7 +98,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             consecutiveDays: profileData.consecutive_days,
             points: profileData.points,
             nickname: profileData.nickname,
-            gender: profileData.gender
+            gender: profileData.gender,
+            subscriptionEnd: subscriptionEnd ? new Date(subscriptionEnd) : undefined,
+            createdAt: profileData.created_at ? new Date(profileData.created_at) : undefined
           });
         }
       } catch (error) {
@@ -128,7 +137,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (name: string, email: string, password: string) => {
+  // Alias for signIn for backward compatibility
+  const signInWithCredentials = signIn;
+
+  const signUp = async (name: string, email: string, password: string, gender: string = 'male') => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -141,7 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             total_reflections: 0,
             chapters_read: 0,
             consecutive_days: 0,
-            points: 0
+            points: 0,
+            gender
           }
         }
       });
@@ -159,7 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           total_reflections: 0,
           chapters_read: 0,
           consecutive_days: 0,
-          points: 0
+          points: 0,
+          gender
         });
 
       if (profileError) throw profileError;
@@ -186,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     chaptersRead: number;
     consecutiveDays: number;
     gender: string;
+    nickname: string;
   }>) => {
     if (!currentUser) throw new Error("Usuário não autenticado.");
 
@@ -199,6 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           chapters_read: data.chaptersRead,
           consecutive_days: data.consecutiveDays,
           gender: data.gender,
+          nickname: data.nickname
         })
         .eq('id', currentUser.id);
 
@@ -209,6 +225,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("Error updating profile:", error);
       throw new Error(error.message || "Erro ao atualizar o perfil.");
+    }
+  };
+
+  // Add refreshSubscription function
+  const refreshSubscription = async () => {
+    try {
+      if (!currentUser) return;
+      
+      // Get subscription status
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('subscribers')
+        .select('subscribed, subscription_end')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (subscriptionError && subscriptionError.code !== 'PGRST116') {
+        console.error("Error fetching subscription:", subscriptionError);
+        return;
+      }
+
+      // Handle case with no subscription record
+      const isSubscribed = subscriptionData?.subscribed || false;
+      const subscriptionEnd = subscriptionData?.subscription_end || null;
+      
+      // Check if subscription is valid
+      const isSubscriptionValid = isSubscribed && subscriptionEnd && new Date(subscriptionEnd) > new Date();
+      
+      setIsPro(isSubscriptionValid);
+      
+      if (currentUser && subscriptionEnd) {
+        setCurrentUser({
+          ...currentUser,
+          subscriptionEnd: new Date(subscriptionEnd)
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing subscription:", error);
     }
   };
 
@@ -232,34 +285,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profileError) throw profileError;
 
       // Get subscription status
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('subscribers')
-        .select('subscribed, subscription_end')
-        .eq('user_id', userId)
-        .single();
-
-      // Handle case with no subscription record
-      const isSubscribed = subscriptionData?.subscribed || false;
-      const subscriptionEnd = subscriptionData?.subscription_end || null;
-      
-      // Check if subscription is valid
-      const isSubscriptionValid = isSubscribed && subscriptionEnd && new Date(subscriptionEnd) > new Date();
-      
-      setIsPro(isSubscriptionValid);
+      await refreshSubscription();
       
       if (profileData) {
-        setCurrentUser({
-          id: userId,
-          name: profileData.name,
-          email: profileData.email,
-          photoUrl: profileData.photo_url,
-          level: profileData.level,
-          totalReflections: profileData.total_reflections,
-          chaptersRead: profileData.chapters_read,
-          consecutiveDays: profileData.consecutive_days,
-          points: profileData.points,
-          nickname: profileData.nickname,
-          gender: profileData.gender
+        setCurrentUser(prev => {
+          if (!prev) return null;
+          
+          return {
+            ...prev,
+            id: userId,
+            name: profileData.name,
+            email: profileData.email,
+            photoUrl: profileData.photo_url,
+            level: profileData.level,
+            totalReflections: profileData.total_reflections,
+            chaptersRead: profileData.chapters_read,
+            consecutiveDays: profileData.consecutive_days,
+            points: profileData.points,
+            nickname: profileData.nickname,
+            gender: profileData.gender,
+            createdAt: profileData.created_at ? new Date(profileData.created_at) : undefined
+          };
         });
       }
     } catch (error) {
@@ -270,11 +316,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     currentUser,
     isPro,
+    isAuthenticated: !!currentUser,
+    loading: isLoading,
     signIn,
+    signInWithCredentials,
     signUp,
     signOut,
     updateProfile,
-    refreshUser
+    refreshUser,
+    refreshSubscription
   };
 
   return (
