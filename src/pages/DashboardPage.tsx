@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import PageTitle from '@/components/PageTitle';
@@ -6,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { bibleVerses } from '@/data/bibleData';
-import { Calendar, BookOpen, Edit3, Award } from 'lucide-react';
+import { Calendar, BookOpen, Edit3, Award, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getLevelTitle } from '@/utils/achievementUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -218,7 +219,7 @@ const DashboardPage: React.FC = () => {
               </Card>
             )}
 
-            {nextVerseToStudy && (
+            {nextVerseToStudy ? (
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 mb-4">
@@ -236,6 +237,28 @@ const DashboardPage: React.FC = () => {
                   <Link to="/study-route">
                     <Button className="w-full">Continuar Estudando</Button>
                   </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <h3 className="font-medium">Jornada Completa</h3>
+                  </div>
+                  <div className="mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      Parabéns! Você leu todos os textos disponíveis na sua rota de estudos.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <Link to="/reflections" className="flex-1">
+                      <Button variant="outline" className="w-full">Ver Reflexões</Button>
+                    </Link>
+                    <Link to="/study-route" className="flex-1">
+                      <Button variant="secondary" className="w-full">Revisar Textos</Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             )}

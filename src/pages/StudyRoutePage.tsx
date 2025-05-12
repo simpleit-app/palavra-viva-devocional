@@ -10,8 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { UserReflection } from '@/data/bibleData';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, RefreshCcw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 
 // Define a type for the location state
 interface LocationState {
@@ -387,15 +388,36 @@ const StudyRoutePage: React.FC = () => {
   const unreadVersesData = availableVerses.filter(verse => !readVerses.includes(verse.id));
 
   const hasReachedFreeLimit = !isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT;
+  
+  // Handle refresh of data
+  const handleRefreshData = () => {
+    setDataLoaded(false);
+    toast({
+      title: "Atualizando dados",
+      description: "Carregando informações mais recentes...",
+    });
+  };
 
   if (!currentUser) return null;
 
   return (
     <div className="container max-w-3xl py-6 px-4 md:px-6">
-      <PageTitle 
-        title="Rota de Estudo Bíblico"
-        subtitle="Siga seu caminho personalizado de aprendizado bíblico."
-      />
+      <div className="flex justify-between items-center">
+        <PageTitle 
+          title="Rota de Estudo Bíblico"
+          subtitle="Siga seu caminho personalizado de aprendizado bíblico."
+        />
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={handleRefreshData}
+          title="Atualizar dados"
+          disabled={loading}
+        >
+          <RefreshCcw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
 
       {!isPro && (
         <Alert className="mb-6">
@@ -430,7 +452,10 @@ const StudyRoutePage: React.FC = () => {
           <TabsContent value="unread" className="mt-6 space-y-6">
             {unreadVersesData.length === 0 ? (
               <div className="text-center py-8 border rounded-lg">
-                <p className="text-muted-foreground">Não há versículos não lidos disponíveis.</p>
+                <p className="text-muted-foreground mb-4">Parabéns! Você leu todos os versículos disponíveis.</p>
+                <Button variant="outline" onClick={() => setActiveTab('read')}>
+                  Ver versículos lidos
+                </Button>
               </div>
             ) : (
               unreadVersesData.map((verse) => {

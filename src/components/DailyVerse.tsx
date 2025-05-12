@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, RefreshCw } from 'lucide-react';
 import { bibleVerses } from '@/data/bibleData';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 const DailyVerse: React.FC = () => {
   const [verse, setVerse] = useState<any>(null);
@@ -93,6 +94,24 @@ const DailyVerse: React.FC = () => {
                   <p className="text-sm text-slate-700 dark:text-slate-300">{randomVerse.summary}</p>
                 </div>
               )}
+              
+              <div className="flex justify-end mt-4 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+                
+                <Link
+                  to="/study-route"
+                  state={{ scrollToVerse: randomVerse.id }}
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  <Button size="sm">Explorar este versículo</Button>
+                </Link>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -125,7 +144,7 @@ export const RandomVerseButton: React.FC = () => {
         className="w-full h-auto py-6 flex flex-col gap-2"
         onClick={getRandomVerse}
       >
-        <BookOpen className="h-6 w-6" />
+        <RefreshCw className="h-6 w-6" />
         <span>Versículo Diário</span>
       </Button>
 
@@ -149,6 +168,24 @@ export const RandomVerseButton: React.FC = () => {
                   <p className="text-sm text-slate-700 dark:text-slate-300">{randomVerse.summary}</p>
                 </div>
               )}
+              
+              <div className="flex justify-end mt-4 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Fechar
+                </Button>
+                
+                <Link
+                  to="/study-route"
+                  state={{ scrollToVerse: randomVerse.id }}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Button size="sm">Explorar este versículo</Button>
+                </Link>
+              </div>
             </div>
           )}
         </DialogContent>
