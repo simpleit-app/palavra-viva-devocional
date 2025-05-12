@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ReloadIcon } from '@radix-ui/react-icons';
+import { Loader2 } from 'lucide-react';
 
 interface FixUserStatsProps {
   onComplete?: () => void;
@@ -61,7 +61,7 @@ const FixUserStats: React.FC<FixUserStatsProps> = ({ onComplete }) => {
     >
       {isLoading ? (
         <>
-          <ReloadIcon className="h-4 w-4 mr-2 animate-spin" />
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           Atualizando...
         </>
       ) : (
