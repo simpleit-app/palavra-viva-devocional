@@ -37,9 +37,12 @@ const queryClient = new QueryClient({
       retry: 1,
       retryDelay: 1000,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      onError: (error) => {
-        console.error('Query error:', error);
-      },
+      meta: {
+        // Updated: Use meta for error handling instead of onError
+        errorHandler: (error: Error) => {
+          console.error('Query error:', error);
+        },
+      }
     },
   },
 });

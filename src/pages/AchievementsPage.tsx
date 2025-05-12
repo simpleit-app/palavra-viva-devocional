@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PageTitle from '@/components/PageTitle';
 import AchievementCard from '@/components/AchievementCard';
@@ -120,7 +119,7 @@ const AchievementsPage: React.FC = () => {
 
       <h3 className="text-lg font-medium mb-4">Ranking de Usuários</h3>
       <div className="mb-8">
-        <RankingPanel variant="large" limit={10} />
+        <RankingPanel limit={5} />
       </div>
 
       <h3 className="text-lg font-medium mb-4">Minhas Medalhas</h3>

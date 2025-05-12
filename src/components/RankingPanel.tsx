@@ -8,12 +8,13 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserRanking {
-  id: string;
-  name: string;
-  photo_url: string;
+  id?: string;
+  name?: string;
+  photo_url?: string;
   points: number;
   level: number;
   rank: number;
+  nickname?: string;
 }
 
 interface RankingPanelProps {
@@ -42,7 +43,17 @@ const RankingPanel: React.FC<RankingPanelProps> = ({ limit = 10 }) => {
         }
         
         if (data && Array.isArray(data)) {
-          setRankings(data);
+          // Map the response data to our UserRanking interface
+          const mappedData: UserRanking[] = data.map(item => ({
+            id: item.id || `rank-${item.rank}`,
+            name: item.name || item.nickname || `User ${item.rank}`,
+            nickname: item.nickname || `User ${item.rank}`,
+            photo_url: item.photo_url || '',
+            points: item.points || 0,
+            level: item.level || 1,
+            rank: item.rank
+          }));
+          setRankings(mappedData);
         } else {
           // Fallback to mock data if the data structure is not as expected
           console.error('Unexpected data format for rankings:', data);
@@ -65,6 +76,7 @@ const RankingPanel: React.FC<RankingPanelProps> = ({ limit = 10 }) => {
     return Array.from({ length: count }, (_, i) => ({
       id: `mock-${i}`,
       name: `Usuário ${i + 1}`,
+      nickname: `Usuário ${i + 1}`,
       photo_url: '',
       points: 1000 - (i * 50),
       level: Math.max(1, Math.floor((1000 - (i * 50)) / 100)),
@@ -83,6 +95,18 @@ const RankingPanel: React.FC<RankingPanelProps> = ({ limit = 10 }) => {
       default:
         return 'text-gray-700 dark:text-gray-300';
     }
+  };
+
+  // Helper function to get initials safely
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return "XX";
+    
+    const nameParts = name.split(' ');
+    if (nameParts.length > 1) {
+      return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+    }
+    
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -115,13 +139,13 @@ const RankingPanel: React.FC<RankingPanelProps> = ({ limit = 10 }) => {
                     {user.rank}
                   </span>
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.photo_url || ''} alt={user.name} />
+                    <AvatarImage src={user.photo_url || ''} alt={user.name || user.nickname} />
                     <AvatarFallback>
-                      {user.name.substring(0, 2).toUpperCase()}
+                      {getInitials(user.name || user.nickname)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="font-medium">{user.name}</p>
+                    <p className="font-medium">{user.name || user.nickname}</p>
                     <p className="text-sm text-muted-foreground">
                       {user.points} pontos • Nível {user.level}
                     </p>
