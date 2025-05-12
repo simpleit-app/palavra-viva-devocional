@@ -19,7 +19,7 @@ import LandingPage from "./pages/LandingPage";
 import AdminCreator from "./components/AdminCreator";
 import RankingPanel from "./components/RankingPanel";
 
-// Wrap LandingPage with RankingPanel
+// Wrap LandingPage with RankingPanel using functional composition
 const EnhancedLandingPage = () => (
   <div>
     <LandingPage />
@@ -29,7 +29,20 @@ const EnhancedLandingPage = () => (
   </div>
 );
 
-const queryClient = new QueryClient();
+// Create a new query client with error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Add retry and error handling for all queries
+      retry: 1,
+      retryDelay: 1000,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      onError: (error) => {
+        console.error('Query error:', error);
+      },
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -102,7 +115,7 @@ const App = () => (
                 } 
               />
               
-              {/* Redirect for Index.tsx which had unneeded redirects */}
+              {/* Redirect for old paths */}
               <Route path="/index" element={<Navigate to="/" replace />} />
               
               <Route path="*" element={<NotFound />} />
