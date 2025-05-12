@@ -54,9 +54,11 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   const [reflectionText, setReflectionText] = useState(userReflection?.text || '');
   
   const handleSave = () => {
-    onSaveReflection(verse.id, reflectionText);
-    setIsEditing(false);
-    setShowReflectionInput(true);
+    if (reflectionText.trim()) {
+      onSaveReflection(verse.id, reflectionText);
+      setIsEditing(false);
+      setShowReflectionInput(true);
+    }
   };
 
   const handleDelete = () => {

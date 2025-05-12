@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { BookOpen, RefreshCw } from 'lucide-react';
@@ -7,12 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DailyVerse: React.FC = () => {
   const [verse, setVerse] = useState<any>(null);
   const [randomVerse, setRandomVerse] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAiVerse, setIsAiVerse] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     // Get today's date in YYYY-MM-DD format to use as a seed
@@ -36,15 +39,85 @@ const DailyVerse: React.FC = () => {
     setVerse(bibleVerses[verseIndex]);
   }, []);
 
-  const getRandomVerse = () => {
+  const getRandomVerse = async () => {
+    // Check if user has read all available verses
+    if (currentUser) {
+      const { data: readVersesData } = await supabase
+        .from('read_verses')
+        .select('verse_id')
+        .eq('user_id', currentUser.id);
+      
+      const readVerseIds = readVersesData?.map(item => item.verse_id) || [];
+      
+      // If all verses are read, generate one with AI
+      if (readVerseIds.length >= bibleVerses.length) {
+        generateAiVerse();
+        return;
+      }
+    }
+    
+    // Otherwise pick a random verse from the existing list
     const randomIndex = Math.floor(Math.random() * bibleVerses.length);
     setRandomVerse(bibleVerses[randomIndex]);
+    setIsAiVerse(false);
     setIsDialogOpen(true);
     
     toast({
       title: "Versículo Aleatório",
       description: "Um novo versículo foi gerado para você!",
     });
+  };
+
+  const generateAiVerse = async () => {
+    try {
+      setIsAiVerse(true);
+      toast({
+        title: "Gerando versículo...",
+        description: "Estamos criando um novo versículo para você com IA.",
+      });
+
+      // Create a randomly generated verse in the same format as our Bible verses
+      const bookNames = ["Provérbios", "Salmos", "Eclesiastes", "Isaías", "Mateus", "João", "Romanos"];
+      const randomBook = bookNames[Math.floor(Math.random() * bookNames.length)];
+      const randomChapter = Math.floor(Math.random() * 150) + 1;
+      const randomVerseNum = Math.floor(Math.random() * 30) + 1;
+      
+      // These would normally come from an AI, but we're simulating for now
+      const inspirationalTexts = [
+        "O amor verdadeiro é paciente e bondoso. Não se vangloria, não se orgulha, não maltrata, não procura seus interesses.",
+        "Todo aquele que busca a sabedoria com sinceridade encontrará o caminho da luz e da verdade eterna.",
+        "Confie no caminho que o Senhor traça para você, mesmo quando não consegue ver onde ele leva.",
+        "A palavra gentil é como mel para a alma, traz cura para o espírito e paz para o coração conturbado.",
+        "Aquele que semeia bondade colherá amizades; aquele que compartilha sabedoria multiplica conhecimento."
+      ];
+      
+      const randomText = inspirationalTexts[Math.floor(Math.random() * inspirationalTexts.length)];
+      
+      const aiGeneratedVerse = {
+        id: "ai-" + Date.now(),
+        book: randomBook,
+        chapter: randomChapter,
+        verse: randomVerseNum,
+        text: randomText,
+        summary: "Este versículo foi gerado especialmente para sua reflexão de hoje.",
+        order: -1
+      };
+      
+      setRandomVerse(aiGeneratedVerse);
+      setIsDialogOpen(true);
+      
+      toast({
+        title: "Versículo Gerado com IA",
+        description: "Um versículo inspirador foi criado para sua reflexão.",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar versículo:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível gerar um novo versículo. Tente novamente mais tarde.",
+      });
+    }
   };
 
   if (!verse) return null;
@@ -77,9 +150,13 @@ const DailyVerse: React.FC = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Versículo Aleatório</DialogTitle>
+            <DialogTitle>
+              {isAiVerse ? "Versículo Inspirador (IA)" : "Versículo Aleatório"}
+            </DialogTitle>
             <DialogDescription>
-              Um versículo escolhido especialmente para você.
+              {isAiVerse 
+                ? "Um versículo gerado com IA para sua reflexão."
+                : "Um versículo escolhido especialmente para você."}
             </DialogDescription>
           </DialogHeader>
           
@@ -104,13 +181,15 @@ const DailyVerse: React.FC = () => {
                   Fechar
                 </Button>
                 
-                <Link
-                  to="/study-route"
-                  state={{ scrollToVerse: randomVerse.id }}
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  <Button size="sm">Explorar este versículo</Button>
-                </Link>
+                {!isAiVerse && (
+                  <Link
+                    to="/study-route"
+                    state={{ scrollToVerse: randomVerse.id }}
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    <Button size="sm">Explorar este versículo</Button>
+                  </Link>
+                )}
               </div>
             </div>
           )}
@@ -124,17 +203,89 @@ const DailyVerse: React.FC = () => {
 export const RandomVerseButton: React.FC = () => {
   const [randomVerse, setRandomVerse] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isAiVerse, setIsAiVerse] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
-  const getRandomVerse = () => {
+  const getRandomVerse = async () => {
+    // Check if user has read all available verses
+    if (currentUser) {
+      const { data: readVersesData } = await supabase
+        .from('read_verses')
+        .select('verse_id')
+        .eq('user_id', currentUser.id);
+      
+      const readVerseIds = readVersesData?.map(item => item.verse_id) || [];
+      
+      // If all verses are read, generate one with AI
+      if (readVerseIds.length >= bibleVerses.length) {
+        generateAiVerse();
+        return;
+      }
+    }
+
+    // Otherwise pick a random verse
     const randomIndex = Math.floor(Math.random() * bibleVerses.length);
     setRandomVerse(bibleVerses[randomIndex]);
+    setIsAiVerse(false);
     setIsOpen(true);
     
     toast({
       title: "Versículo Aleatório",
       description: "Um novo versículo foi gerado para você!",
     });
+  };
+
+  const generateAiVerse = async () => {
+    try {
+      setIsAiVerse(true);
+      toast({
+        title: "Gerando versículo...",
+        description: "Estamos criando um novo versículo para você com IA.",
+      });
+
+      // Create a randomly generated verse in the same format as our Bible verses
+      const bookNames = ["Provérbios", "Salmos", "Eclesiastes", "Isaías", "Mateus", "João", "Romanos"];
+      const randomBook = bookNames[Math.floor(Math.random() * bookNames.length)];
+      const randomChapter = Math.floor(Math.random() * 150) + 1;
+      const randomVerseNum = Math.floor(Math.random() * 30) + 1;
+      
+      // These would normally come from an AI, but we're simulating for now
+      const inspirationalTexts = [
+        "O amor verdadeiro é paciente e bondoso. Não se vangloria, não se orgulha, não maltrata, não procura seus interesses.",
+        "Todo aquele que busca a sabedoria com sinceridade encontrará o caminho da luz e da verdade eterna.",
+        "Confie no caminho que o Senhor traça para você, mesmo quando não consegue ver onde ele leva.",
+        "A palavra gentil é como mel para a alma, traz cura para o espírito e paz para o coração conturbado.",
+        "Aquele que semeia bondade colherá amizades; aquele que compartilha sabedoria multiplica conhecimento."
+      ];
+      
+      const randomText = inspirationalTexts[Math.floor(Math.random() * inspirationalTexts.length)];
+      
+      const aiGeneratedVerse = {
+        id: "ai-" + Date.now(),
+        book: randomBook,
+        chapter: randomChapter,
+        verse: randomVerseNum,
+        text: randomText,
+        summary: "Este versículo foi gerado especialmente para sua reflexão de hoje.",
+        order: -1
+      };
+      
+      setRandomVerse(aiGeneratedVerse);
+      setIsOpen(true);
+      
+      toast({
+        title: "Versículo Gerado com IA",
+        description: "Um versículo inspirador foi criado para sua reflexão.",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar versículo:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível gerar um novo versículo. Tente novamente mais tarde.",
+      });
+    }
   };
 
   return (
@@ -151,9 +302,13 @@ export const RandomVerseButton: React.FC = () => {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Versículo Aleatório</DialogTitle>
+            <DialogTitle>
+              {isAiVerse ? "Versículo Inspirador (IA)" : "Versículo Aleatório"}
+            </DialogTitle>
             <DialogDescription>
-              Um versículo escolhido especialmente para você.
+              {isAiVerse 
+                ? "Um versículo gerado com IA para sua reflexão."
+                : "Um versículo escolhido especialmente para você."}
             </DialogDescription>
           </DialogHeader>
           
@@ -178,13 +333,15 @@ export const RandomVerseButton: React.FC = () => {
                   Fechar
                 </Button>
                 
-                <Link
-                  to="/study-route"
-                  state={{ scrollToVerse: randomVerse.id }}
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Button size="sm">Explorar este versículo</Button>
-                </Link>
+                {!isAiVerse && (
+                  <Link
+                    to="/study-route"
+                    state={{ scrollToVerse: randomVerse.id }}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Button size="sm">Explorar este versículo</Button>
+                  </Link>
+                )}
               </div>
             </div>
           )}

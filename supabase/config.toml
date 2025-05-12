@@ -31,3 +31,6 @@ enabled = true
 
 [functions.fix-user-stats]
 verify_jwt = true
+
+[functions.generate-verse]
+verify_jwt = true
