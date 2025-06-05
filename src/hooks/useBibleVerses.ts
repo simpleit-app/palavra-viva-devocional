@@ -124,18 +124,18 @@ export const useBibleVerses = () => {
         toast({
           variant: "destructive",
           title: "Erro ao gerar versículos",
-          description: "Não foi possível gerar novos versículos. Verifique sua cota do Gemini.",
+          description: "Não foi possível gerar novos versículos. Tente novamente.",
         });
         return false;
       }
 
-      // Check if the response indicates a quota error
+      // Check if the response indicates a failure
       if (data?.success === false && data?.error) {
         console.error('Generation failed:', data.error);
         toast({
           variant: "destructive",
-          title: "Cota do Gemini excedida",
-          description: "Sua cota do Gemini foi excedida. Verifique seu plano na Google Cloud Console",
+          title: "Erro na geração",
+          description: "Não foi possível gerar versículos. Tente novamente mais tarde.",
         });
         return false;
       }
@@ -159,7 +159,7 @@ export const useBibleVerses = () => {
         toast({
           variant: "destructive",
           title: "Falha na geração",
-          description: "Não foi possível gerar versículos. Verifique sua conta Gemini.",
+          description: "Não foi possível gerar versículos. Tente novamente.",
         });
         return false;
       }
@@ -168,7 +168,7 @@ export const useBibleVerses = () => {
       toast({
         variant: "destructive",
         title: "Erro ao gerar versículos",
-        description: "Erro inesperado ao gerar versículos. Verifique sua conta Gemini.",
+        description: "Erro inesperado ao gerar versículos. Tente novamente.",
       });
       return false;
     } finally {
