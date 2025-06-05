@@ -28,26 +28,40 @@ import { calculateUserLevel } from '@/utils/achievementUtils';
 const FREE_PLAN_REFLECTION_LIMIT = 2;
 
 const ReflectionsPage: React.FC = () => {
-  const { currentUser, updateProfile, isPro } = useAuth();
+  const { currentUser, updateProfile, isPro, isAuthenticated, loading } = useAuth();
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [editingReflection, setEditingReflection] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reflectionToDelete, setReflectionToDelete] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [reflectionsLoading, setReflectionsLoading] = useState(true);
   const navigate = useNavigate();
 
   // Load reflections when component mounts or when user changes
   useEffect(() => {
-    if (currentUser) {
+    console.log('🔵 ReflectionsPage useEffect triggered', { 
+      currentUser: !!currentUser, 
+      isAuthenticated, 
+      loading,
+      userId: currentUser?.id 
+    });
+    
+    if (isAuthenticated && currentUser?.id && !loading) {
       loadReflections();
+    } else if (!loading && !isAuthenticated) {
+      console.log('🟡 User not authenticated, redirecting...');
+      setReflectionsLoading(false);
     }
-  }, [currentUser?.id]); // Only depend on user ID to avoid unnecessary re-renders
+  }, [currentUser?.id, isAuthenticated, loading]);
 
   const loadReflections = async () => {
-    if (!currentUser) return;
+    if (!currentUser?.id) {
+      console.log('🔴 No current user ID available');
+      setReflectionsLoading(false);
+      return;
+    }
     
-    setLoading(true);
+    setReflectionsLoading(true);
     console.log('🔵 Carregando reflexões para usuário:', currentUser.id);
     
     try {
@@ -55,14 +69,14 @@ const ReflectionsPage: React.FC = () => {
         .from('reflections')
         .select('*')
         .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false }); // Order by newest first
+        .order('created_at', { ascending: false });
         
       if (error) {
         console.error('🔴 Erro ao carregar reflexões:', error);
         throw error;
       }
       
-      console.log('🟢 Reflexões carregadas:', data?.length || 0);
+      console.log('🟢 Reflexões carregadas do banco:', data?.length || 0, data);
       
       const formattedReflections = data?.map(item => ({
         id: item.id,
@@ -72,9 +86,10 @@ const ReflectionsPage: React.FC = () => {
         createdAt: new Date(item.created_at)
       })) || [];
       
+      console.log('🟢 Reflexões formatadas:', formattedReflections.length, formattedReflections);
       setReflections(formattedReflections);
       
-      // Update user stats if needed - calculate level based on current stats
+      // Update user stats if needed
       const currentStats = {
         totalReflections: formattedReflections.length,
         chaptersRead: currentUser.chaptersRead,
@@ -100,11 +115,34 @@ const ReflectionsPage: React.FC = () => {
         description: "Não foi possível carregar suas reflexões. Tente novamente mais tarde.",
       });
     } finally {
-      setLoading(false);
+      setReflectionsLoading(false);
     }
   };
 
-  if (!currentUser) return null;
+  // Show loading while auth is initializing
+  if (loading) {
+    return (
+      <div className="container max-w-4xl py-6 px-4 md:px-6">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if not authenticated
+  if (!isAuthenticated || !currentUser) {
+    return (
+      <div className="container max-w-4xl py-6 px-4 md:px-6">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">Você precisa estar logado para ver suas reflexões.</p>
+          <Button asChild>
+            <Link to="/login">Fazer Login</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleEditStart = (reflection: UserReflection) => {
     setEditingReflection(reflection.id);
@@ -178,7 +216,7 @@ const ReflectionsPage: React.FC = () => {
         .eq('verse_id', verseId)
         .eq('user_id', currentUser.id);
         
-      if (readVerseError && readVerseError.code !== 'PGRST116') { // Ignore "not found" errors
+      if (readVerseError && readVerseError.code !== 'PGRST116') {
         console.error('🔴 Error removing read verse:', readVerseError);
         throw readVerseError;
       }
@@ -305,7 +343,7 @@ const ReflectionsPage: React.FC = () => {
         </div>
       )}
 
-      {loading ? (
+      {reflectionsLoading ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">Carregando suas reflexões...</p>
         </div>
