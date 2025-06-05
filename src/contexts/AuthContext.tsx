@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateUserLevel } from '@/utils/achievementUtils';
@@ -177,9 +176,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (profileData) {
               console.log('🟢 Perfil carregado após signup/login:', profileData);
               
-              // Se o nickname não existe, gerar um
-              if (!profileData.nickname) {
-                console.log('🔵 Nickname não encontrado, gerando um novo...');
+              // Se o nickname não existe ou é um fallback, gerar um novo
+              if (!profileData.nickname || profileData.nickname.startsWith('Usuário')) {
+                console.log('🔵 Nickname não encontrado ou é fallback, gerando um novo...');
                 try {
                   const { data: nicknameResult, error: nicknameError } = await supabase
                     .rpc('generate_biblical_nickname_by_gender', { 
@@ -268,7 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (error) {
             console.error('🔴 Erro ao carregar perfil após signup/login:', error);
           }
-        }, 2000);
+        }, 3000); // Aumentei para 3 segundos para dar mais tempo ao trigger
       } else if (event === 'SIGNED_OUT') {
         console.log('🟡 Usuário deslogado');
         setCurrentUser(null);
