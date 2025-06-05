@@ -100,6 +100,11 @@ const additionalTexts = [
   "A esperança que se adia faz adoecer o coração, mas o desejo realizado é árvore da vida."
 ];
 
+// Função para gerar UUID válido
+function generateUUID() {
+  return crypto.randomUUID();
+}
+
 function generateVerse(index: number) {
   // Usar template existente ou gerar novo texto
   if (index < verseTemplates.length) {
@@ -167,8 +172,8 @@ serve(async (req) => {
         
         const verseData = generateVerse(i);
 
-        // Generate unique ID
-        const verseId = `${verseData.book.toLowerCase().replace(/\s+/g, '-')}-${verseData.chapter}-${verseData.verse}-${Date.now()}-${i}`;
+        // Generate proper UUID for the verse ID
+        const verseId = generateUUID();
 
         // Insert the new verse into the database
         const { error: insertError } = await supabase
