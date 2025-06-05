@@ -1,5 +1,7 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { calculateUserLevel } from '@/utils/achievementUtils';
 
 interface AuthContextType {
   currentUser: {
@@ -32,6 +34,7 @@ interface AuthContextType {
     consecutiveDays: number;
     gender: string;
     nickname: string;
+    level: number;
   }>) => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
@@ -94,6 +97,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('🔵 Status Pro definido:', isSubscribed);
         
         if (profileData) {
+          // Calculate and update level if needed
+          const currentStats = {
+            totalReflections: profileData.total_reflections,
+            chaptersRead: profileData.chapters_read,
+            consecutiveDays: profileData.consecutive_days
+          };
+          
+          const calculatedLevel = calculateUserLevel(currentStats);
+          
+          // Update level in database if it's different
+          if (profileData.level !== calculatedLevel) {
+            console.log(`🔵 Atualizando nível do usuário de ${profileData.level} para ${calculatedLevel}`);
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ level: calculatedLevel })
+              .eq('id', userId);
+              
+            if (!updateError) {
+              profileData.level = calculatedLevel;
+            }
+          }
+          
           const user = {
             id: userId,
             name: profileData.name,
@@ -181,6 +206,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   }
                 } catch (error) {
                   console.error('🔴 Erro na geração do nickname:', error);
+                }
+              }
+              
+              // Calculate and update level if needed
+              const currentStats = {
+                totalReflections: profileData.total_reflections,
+                chaptersRead: profileData.chapters_read,
+                consecutiveDays: profileData.consecutive_days
+              };
+              
+              const calculatedLevel = calculateUserLevel(currentStats);
+              
+              if (profileData.level !== calculatedLevel) {
+                console.log(`🔵 Atualizando nível do usuário de ${profileData.level} para ${calculatedLevel}`);
+                const { error: updateError } = await supabase
+                  .from('profiles')
+                  .update({ level: calculatedLevel })
+                  .eq('id', session.user.id);
+                  
+                if (!updateError) {
+                  profileData.level = calculatedLevel;
                 }
               }
               
@@ -322,10 +368,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     consecutiveDays: number;
     gender: string;
     nickname: string;
+    level: number;
   }>) => {
     if (!currentUser) throw new Error("Usuário não autenticado.");
 
     try {
+      // If we're updating reflections or chapters, recalculate level
+      let updatedLevel = data.level;
+      
+      if (data.totalReflections !== undefined || data.chaptersRead !== undefined) {
+        const currentStats = {
+          totalReflections: data.totalReflections ?? currentUser.totalReflections,
+          chaptersRead: data.chaptersRead ?? currentUser.chaptersRead,
+          consecutiveDays: data.consecutiveDays ?? currentUser.consecutiveDays
+        };
+        
+        updatedLevel = calculateUserLevel(currentStats);
+        console.log('🔵 Nível recalculado durante atualização:', updatedLevel);
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -335,7 +396,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           chapters_read: data.chaptersRead,
           consecutive_days: data.consecutiveDays,
           gender: data.gender,
-          nickname: data.nickname
+          nickname: data.nickname,
+          level: updatedLevel
         })
         .eq('id', currentUser.id);
 

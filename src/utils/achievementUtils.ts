@@ -48,10 +48,18 @@ export const calculateProgress = (
 };
 
 export const calculateUserLevel = (userStats: UserStats): number => {
-  // Simple level calculation based on chapters read and reflections
-  // 1 point per chapter read, 2 points per reflection
-  const points = userStats.chaptersRead + userStats.totalReflections * 2;
-  return Math.floor(points / 10) + 1; // Level 1 starts at 0 points
+  // Calculate points: 1 point per chapter read, 2 points per reflection
+  const points = userStats.chaptersRead + (userStats.totalReflections * 2);
+  
+  // Level calculation: Every 10 points = 1 level, starting at level 1
+  // Level 1: 0-9 points
+  // Level 2: 10-19 points  
+  // Level 3: 20-29 points, etc.
+  const level = Math.floor(points / 10) + 1;
+  
+  console.log(`🔵 Calculando nível: ${userStats.chaptersRead} capítulos + ${userStats.totalReflections} reflexões = ${points} pontos = nível ${level}`);
+  
+  return level;
 };
 
 export const getLevelTitle = (level: number): string => {
@@ -69,4 +77,8 @@ export const getLevelTitle = (level: number): string => {
   if (level <= 0) return titles[0];
   if (level > titles.length) return titles[titles.length - 1];
   return titles[level - 1];
+};
+
+export const calculatePointsFromStats = (userStats: UserStats): number => {
+  return userStats.chaptersRead + (userStats.totalReflections * 2);
 };

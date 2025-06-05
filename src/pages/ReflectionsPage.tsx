@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
@@ -22,6 +23,7 @@ import { UserReflection } from '@/data/bibleData';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { calculateUserLevel } from '@/utils/achievementUtils';
 
 const FREE_PLAN_REFLECTION_LIMIT = 2;
 
@@ -35,46 +37,63 @@ const ReflectionsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Fix: Only load reflections once when component mounts or when user changes
-  // Remove the refreshSubscription call that was causing the flickering
+  // Load reflections when component mounts or when user changes
   useEffect(() => {
     if (currentUser) {
       loadReflections();
     }
-  }, [currentUser]);
+  }, [currentUser?.id]); // Only depend on user ID to avoid unnecessary re-renders
 
   const loadReflections = async () => {
     if (!currentUser) return;
     
     setLoading(true);
+    console.log('🔵 Carregando reflexões para usuário:', currentUser.id);
     
     try {
       const { data, error } = await supabase
         .from('reflections')
         .select('*')
-        .eq('user_id', currentUser.id);
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false }); // Order by newest first
         
-      if (error) throw error;
+      if (error) {
+        console.error('🔴 Erro ao carregar reflexões:', error);
+        throw error;
+      }
       
-      const formattedReflections = data.map(item => ({
+      console.log('🟢 Reflexões carregadas:', data?.length || 0);
+      
+      const formattedReflections = data?.map(item => ({
         id: item.id,
         userId: item.user_id,
         verseId: item.verse_id,
         text: item.text,
         createdAt: new Date(item.created_at)
-      }));
+      })) || [];
       
       setReflections(formattedReflections);
       
-      // Update user stats if needed
-      if (currentUser.totalReflections !== formattedReflections.length) {
+      // Update user stats if needed - calculate level based on current stats
+      const currentStats = {
+        totalReflections: formattedReflections.length,
+        chaptersRead: currentUser.chaptersRead,
+        consecutiveDays: currentUser.consecutiveDays
+      };
+      
+      const calculatedLevel = calculateUserLevel(currentStats);
+      
+      if (currentUser.totalReflections !== formattedReflections.length || 
+          currentUser.level !== calculatedLevel) {
+        console.log('🔵 Atualizando estatísticas do usuário...');
         await updateProfile({
-          totalReflections: formattedReflections.length
+          totalReflections: formattedReflections.length,
+          level: calculatedLevel
         });
       }
       
     } catch (error) {
-      console.error("Error loading reflections:", error);
+      console.error("🔴 Error loading reflections:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar reflexões",
@@ -150,7 +169,7 @@ const ReflectionsPage: React.FC = () => {
       
       const verseId = reflection.verseId;
       
-      console.log('Deleting reflection and removing from read_verses:', reflectionToDelete, verseId);
+      console.log('🔵 Excluindo reflexão e removendo de read_verses:', reflectionToDelete, verseId);
       
       // First remove from read_verses to ensure the verse becomes unread
       const { error: readVerseError } = await supabase
@@ -160,7 +179,7 @@ const ReflectionsPage: React.FC = () => {
         .eq('user_id', currentUser.id);
         
       if (readVerseError && readVerseError.code !== 'PGRST116') { // Ignore "not found" errors
-        console.error('Error removing read verse:', readVerseError);
+        console.error('🔴 Error removing read verse:', readVerseError);
         throw readVerseError;
       }
       
@@ -181,7 +200,7 @@ const ReflectionsPage: React.FC = () => {
       setDeleteConfirmOpen(false);
       setReflectionToDelete(null);
       
-      // Update user stats (get current read verses count from database to be accurate)
+      // Update user stats - recalculate level
       const { data: readVersesData } = await supabase
         .from('read_verses')
         .select('verse_id')
@@ -189,9 +208,18 @@ const ReflectionsPage: React.FC = () => {
       
       const currentReadCount = readVersesData?.length || 0;
       
+      const currentStats = {
+        totalReflections: updatedReflections.length,
+        chaptersRead: currentReadCount,
+        consecutiveDays: currentUser.consecutiveDays
+      };
+      
+      const calculatedLevel = calculateUserLevel(currentStats);
+      
       await updateProfile({
         totalReflections: updatedReflections.length,
-        chaptersRead: currentReadCount
+        chaptersRead: currentReadCount,
+        level: calculatedLevel
       });
       
       toast({
@@ -200,7 +228,7 @@ const ReflectionsPage: React.FC = () => {
       });
       
     } catch (error) {
-      console.error("Error deleting reflection:", error);
+      console.error("🔴 Error deleting reflection:", error);
       toast({
         variant: "destructive",
         title: "Erro ao excluir",
@@ -255,9 +283,6 @@ const ReflectionsPage: React.FC = () => {
     
   const hasReachedFreeLimit = !isPro && reflections.length > FREE_PLAN_REFLECTION_LIMIT;
 
-  const sortedReflections = [...displayReflections]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
   return (
     <div className="container max-w-4xl py-6 px-4 md:px-6">
       <PageTitle 
@@ -284,7 +309,7 @@ const ReflectionsPage: React.FC = () => {
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">Carregando suas reflexões...</p>
         </div>
-      ) : sortedReflections.length === 0 ? (
+      ) : displayReflections.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">
             Você ainda não tem reflexões salvas.
@@ -295,7 +320,7 @@ const ReflectionsPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid gap-6 mt-6">
-          {sortedReflections.map(reflection => {
+          {displayReflections.map(reflection => {
             const verse = bibleVerses.find(v => v.id === reflection.verseId);
             if (!verse) return null;
             
