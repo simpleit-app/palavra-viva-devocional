@@ -150,22 +150,27 @@ const ReflectionsPage: React.FC = () => {
       
       const verseId = reflection.verseId;
       
-      // Delete the reflection
-      const { error: reflectionError } = await supabase
-        .from('reflections')
-        .delete()
-        .eq('id', reflectionToDelete);
-        
-      if (reflectionError) throw reflectionError;
+      console.log('Deleting reflection and removing from read_verses:', reflectionToDelete, verseId);
       
-      // Remove the verse from read verses to mark it as unread
+      // First remove from read_verses to ensure the verse becomes unread
       const { error: readVerseError } = await supabase
         .from('read_verses')
         .delete()
         .eq('verse_id', verseId)
         .eq('user_id', currentUser.id);
         
-      if (readVerseError) throw readVerseError;
+      if (readVerseError && readVerseError.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error removing read verse:', readVerseError);
+        throw readVerseError;
+      }
+      
+      // Then delete the reflection
+      const { error: reflectionError } = await supabase
+        .from('reflections')
+        .delete()
+        .eq('id', reflectionToDelete);
+        
+      if (reflectionError) throw reflectionError;
       
       // Update local state
       const updatedReflections = reflections.filter(
@@ -176,10 +181,17 @@ const ReflectionsPage: React.FC = () => {
       setDeleteConfirmOpen(false);
       setReflectionToDelete(null);
       
-      // Update user stats
+      // Update user stats (get current read verses count from database to be accurate)
+      const { data: readVersesData } = await supabase
+        .from('read_verses')
+        .select('verse_id')
+        .eq('user_id', currentUser.id);
+      
+      const currentReadCount = readVersesData?.length || 0;
+      
       await updateProfile({
         totalReflections: updatedReflections.length,
-        chaptersRead: Math.max(0, currentUser.chaptersRead - 1) // Decrease chapters read count
+        chaptersRead: currentReadCount
       });
       
       toast({

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/PageTitle';
@@ -192,7 +193,14 @@ const StudyRoutePage: React.FC = () => {
 
   const handleMarkAsRead = async (verseId: string) => {
     if (!currentUser) return;
-    if (readVerses.includes(verseId)) return;
+    
+    console.log('Attempting to mark verse as read:', verseId);
+    console.log('Current read verses:', readVerses);
+    
+    if (readVerses.includes(verseId)) {
+      console.log('Verse already marked as read, skipping');
+      return;
+    }
     
     // Check if user has reached the free plan limit
     if (!isPro && readVerses.length >= FREE_PLAN_VERSE_LIMIT) {
@@ -219,6 +227,38 @@ const StudyRoutePage: React.FC = () => {
         return;
       }
       
+      // Check if the verse is already marked as read in database to avoid duplicates
+      const { data: existingRead, error: checkError } = await supabase
+        .from('read_verses')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('verse_id', verseId)
+        .maybeSingle();
+        
+      if (checkError) {
+        console.error('Error checking existing read verse:', checkError);
+        throw checkError;
+      }
+      
+      if (existingRead) {
+        console.log('Verse already exists in database, updating local state');
+        const updatedReadVerses = [...readVerses, verseId];
+        setReadVerses(updatedReadVerses);
+        
+        await updateProfile({
+          chaptersRead: updatedReadVerses.length
+        });
+        
+        setActiveTab('read');
+        
+        toast({
+          title: "Versículo marcado como lido!",
+          description: "Seu progresso foi atualizado.",
+        });
+        return;
+      }
+      
+      console.log('Inserting new read verse record');
       const { error } = await supabase
         .from('read_verses')
         .insert({
@@ -226,7 +266,30 @@ const StudyRoutePage: React.FC = () => {
           verse_id: verseId
         });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting read verse:', error);
+        
+        // If it's a duplicate key error, just update local state
+        if (error.code === '23505') {
+          console.log('Duplicate key error, updating local state only');
+          const updatedReadVerses = [...readVerses, verseId];
+          setReadVerses(updatedReadVerses);
+          
+          await updateProfile({
+            chaptersRead: updatedReadVerses.length
+          });
+          
+          setActiveTab('read');
+          
+          toast({
+            title: "Versículo marcado como lido!",
+            description: "Seu progresso foi atualizado.",
+          });
+          return;
+        }
+        
+        throw error;
+      }
       
       const updatedReadVerses = [...readVerses, verseId];
       setReadVerses(updatedReadVerses);
@@ -258,6 +321,8 @@ const StudyRoutePage: React.FC = () => {
   const handleSaveReflection = async (verseId: string, text: string) => {
     if (!currentUser) return;
     
+    console.log('Saving reflection for verse:', verseId);
+    
     // Check if user has reached the free plan limit for reflections
     const existingReflection = reflections.find(
       (ref) => ref.verseId === verseId && ref.userId === currentUser.id
@@ -274,6 +339,7 @@ const StudyRoutePage: React.FC = () => {
     
     try {
       if (existingReflection) {
+        console.log('Updating existing reflection');
         const { error } = await supabase
           .from('reflections')
           .update({
@@ -293,6 +359,7 @@ const StudyRoutePage: React.FC = () => {
         setReflections(updatedReflections);
         
       } else {
+        console.log('Creating new reflection');
         const { data, error } = await supabase
           .from('reflections')
           .insert({
@@ -339,26 +406,37 @@ const StudyRoutePage: React.FC = () => {
   const handleDeleteReflection = async (reflectionId: string, verseId: string) => {
     if (!currentUser) return;
     
+    console.log('Deleting reflection:', reflectionId, 'for verse:', verseId);
+    
     try {
-      // Delete the reflection
-      const { error: reflectionError } = await supabase
-        .from('reflections')
-        .delete()
-        .eq('id', reflectionId)
-        .eq('user_id', currentUser.id);
-        
-      if (reflectionError) throw reflectionError;
-      
-      // Remove the verse from read verses
+      // First remove from read_verses to ensure the verse becomes unread
+      console.log('Removing verse from read_verses');
       const { error: readVerseError } = await supabase
         .from('read_verses')
         .delete()
         .eq('verse_id', verseId)
         .eq('user_id', currentUser.id);
         
-      if (readVerseError) throw readVerseError;
+      if (readVerseError && readVerseError.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error removing read verse:', readVerseError);
+        throw readVerseError;
+      }
+      
+      // Then delete the reflection
+      console.log('Deleting reflection from database');
+      const { error: reflectionError } = await supabase
+        .from('reflections')
+        .delete()
+        .eq('id', reflectionId)
+        .eq('user_id', currentUser.id);
+        
+      if (reflectionError) {
+        console.error('Error deleting reflection:', reflectionError);
+        throw reflectionError;
+      }
       
       // Update local state
+      console.log('Updating local state after deletion');
       const updatedReflections = reflections.filter(ref => ref.id !== reflectionId);
       setReflections(updatedReflections);
       
