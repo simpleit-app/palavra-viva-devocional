@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import PageTitle from '@/components/PageTitle';
@@ -12,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { getLevelTitle } from '@/utils/achievementUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { UserReflection } from '@/data/bibleData';
-import DailyVerse, { RandomVerseButton } from '@/components/DailyVerse';
+import DailyVerse, { RandomVerseButtonWithAI } from '@/components/DailyVerse';
 
 const DashboardPage: React.FC = () => {
   const { currentUser, updateProfile } = useAuth();
@@ -283,7 +282,7 @@ const DashboardPage: React.FC = () => {
                 <span>Conquistas</span>
               </Button>
             </Link>
-            <RandomVerseButton />
+            <RandomVerseButtonWithAI />
           </div>
         </>
       )}

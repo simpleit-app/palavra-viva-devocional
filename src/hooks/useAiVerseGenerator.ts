@@ -1,12 +1,11 @@
 
-import React from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-interface AiVerseGeneratorProps {
+interface UseAiVerseGeneratorProps {
   onVerseGenerated: (verse: any) => void;
 }
 
-const AiVerseGenerator: React.FC<AiVerseGeneratorProps> = ({ onVerseGenerated }) => {
+export const useAiVerseGenerator = ({ onVerseGenerated }: UseAiVerseGeneratorProps) => {
   const { toast } = useToast();
 
   const generateAiVerse = async () => {
@@ -61,5 +60,3 @@ const AiVerseGenerator: React.FC<AiVerseGeneratorProps> = ({ onVerseGenerated })
 
   return { generateAiVerse };
 };
-
-export default AiVerseGenerator;

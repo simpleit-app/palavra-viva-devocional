@@ -1,17 +1,16 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
 import { useBibleVerses } from '@/hooks/useBibleVerses';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import BibleVerseDisplay from './BibleVerseDisplay';
 import RandomVerseButton from './RandomVerseButton';
 import RandomVerseDialog from './RandomVerseDialog';
-import AiVerseGenerator from './AiVerseGenerator';
+import { useAiVerseGenerator } from '@/hooks/useAiVerseGenerator';
 
 const DailyVerse: React.FC = () => {
   const [randomVerse, setRandomVerse] = useState<any>(null);
@@ -92,7 +91,8 @@ export const RandomVerseButtonWithAI: React.FC = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const { verses, getRandomVerse: getRandomVerseFromHook } = useBibleVerses();
-  const { generateAiVerse } = AiVerseGenerator({
+  
+  const { generateAiVerse } = useAiVerseGenerator({
     onVerseGenerated: (verse) => {
       setRandomVerse(verse);
       setIsAiVerse(true);
