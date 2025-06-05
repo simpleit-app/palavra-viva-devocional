@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import { useBibleVerses } from '@/hooks/useBibleVerses';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import BibleVerseDisplay from './BibleVerseDisplay';
 
 const DailyVerse: React.FC = () => {
@@ -115,6 +117,7 @@ export const RandomVerseButton: React.FC = () => {
   const [isAiVerse, setIsAiVerse] = useState(false);
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  const { verses, getRandomVerse: getRandomVerseFromHook } = useBibleVerses();
 
   const getRandomVerse = async () => {
     // Check if user has read all available verses
@@ -127,22 +130,24 @@ export const RandomVerseButton: React.FC = () => {
       const readVerseIds = readVersesData?.map(item => item.verse_id) || [];
       
       // If all verses are read, generate one with AI
-      if (readVerseIds.length >= bibleVerses.length) {
+      if (readVerseIds.length >= verses.length) {
         generateAiVerse();
         return;
       }
     }
 
     // Otherwise pick a random verse
-    const randomIndex = Math.floor(Math.random() * bibleVerses.length);
-    setRandomVerse(bibleVerses[randomIndex]);
-    setIsAiVerse(false);
-    setIsOpen(true);
-    
-    toast({
-      title: "Versículo Aleatório",
-      description: "Um novo versículo foi gerado para você!",
-    });
+    const verse = getRandomVerseFromHook();
+    if (verse) {
+      setRandomVerse(verse);
+      setIsAiVerse(false);
+      setIsOpen(true);
+      
+      toast({
+        title: "Versículo Aleatório",
+        description: "Um novo versículo foi gerado para você!",
+      });
+    }
   };
 
   const generateAiVerse = async () => {
@@ -177,7 +182,8 @@ export const RandomVerseButton: React.FC = () => {
         verse: randomVerseNum,
         text: randomText,
         summary: "Este versículo foi gerado especialmente para sua reflexão de hoje.",
-        order: -1
+        verse_order: -1,
+        is_generated: true
       };
       
       setRandomVerse(aiGeneratedVerse);
@@ -223,15 +229,7 @@ export const RandomVerseButton: React.FC = () => {
           
           {randomVerse && (
             <div className="py-4">
-              <p className="text-md italic mb-4 text-slate-700 dark:text-slate-300">"{randomVerse.text}"</p>
-              <p className="text-sm text-right text-slate-600 dark:text-slate-400 font-medium">
-                {randomVerse.book} {randomVerse.chapter}:{randomVerse.verse}
-              </p>
-              {randomVerse.summary && (
-                <div className="mt-4 p-3 bg-muted/50 rounded-md">
-                  <p className="text-sm text-slate-700 dark:text-slate-300">{randomVerse.summary}</p>
-                </div>
-              )}
+              <BibleVerseDisplay verse={randomVerse} showSummary />
               
               <div className="flex justify-end mt-4 gap-2">
                 <Button 
