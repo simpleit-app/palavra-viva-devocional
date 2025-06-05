@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bible_verses: {
+        Row: {
+          book: string
+          chapter: number
+          created_at: string | null
+          id: string
+          is_generated: boolean | null
+          summary: string
+          text: string
+          verse: number
+          verse_order: number
+        }
+        Insert: {
+          book: string
+          chapter: number
+          created_at?: string | null
+          id?: string
+          is_generated?: boolean | null
+          summary: string
+          text: string
+          verse: number
+          verse_order: number
+        }
+        Update: {
+          book?: string
+          chapter?: number
+          created_at?: string | null
+          id?: string
+          is_generated?: boolean | null
+          summary?: string
+          text?: string
+          verse?: number
+          verse_order?: number
+        }
+        Relationships: []
+      }
       biblical_names: {
         Row: {
           id: number

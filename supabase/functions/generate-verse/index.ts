@@ -1,14 +1,10 @@
 
-// Esta é uma função Supabase Edge que gera versículos inspiradores usando metáforas aleatórias
-// Para simular uma solução de IA sem necessidade de API keys externas
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -17,77 +13,136 @@ serve(async (req) => {
   }
 
   try {
-    const bookNames = [
-      "Provérbios", "Salmos", "Eclesiastes", "Isaías", "Mateus", "João",
-      "Romanos", "Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses"
-    ];
+    const { count = 1 } = await req.json();
     
-    const subjects = [
-      "amor", "fé", "esperança", "caridade", "bondade", "paciência", 
-      "sabedoria", "coragem", "paz", "gratidão", "perdão", "humildade"
-    ];
-    
-    const verbs = [
-      "é como", "assemelha-se a", "floresce como", "brilha como", 
-      "cresce como", "expande-se como", "renova-se como", "fortalece como"
-    ];
-    
-    const metaphors = [
-      "uma luz no caminho escuro", "água fresca no deserto", "árvore que dá bons frutos",
-      "ouro puro refinado pelo fogo", "semente plantada em solo fértil", "porto seguro na tempestade",
-      "abrigo na tormenta", "orvalho na manhã", "estrela que guia o viajante",
-      "rocha firme que não se abala", "mel que adoça a vida", "perfume que se espalha"
-    ];
-    
-    const conclusions = [
-      "Busque isto com todo seu coração.", 
-      "Que isto seja seu tesouro eterno.",
-      "Aquele que encontrar isto, encontrará a vida.",
-      "Guarde isto no centro de seu ser.",
-      "Caminhe nisto todos os dias.",
-      "Não se afaste deste caminho.",
-      "Nisto está a verdadeira sabedoria.",
-      "Que isto seja sua força diária."
-    ];
+    console.log(`Generating ${count} new verses with OpenAI`);
 
-    // Selecionar aleatoriamente de cada lista
-    const randomBook = bookNames[Math.floor(Math.random() * bookNames.length)];
-    const randomChapter = Math.floor(Math.random() * 150) + 1;
-    const randomVerseNum = Math.floor(Math.random() * 30) + 1;
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY not found in environment variables');
+    }
+
+    // Create the Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const subject = subjects[Math.floor(Math.random() * subjects.length)];
-    const verb = verbs[Math.floor(Math.random() * verbs.length)];
-    const metaphor = metaphors[Math.floor(Math.random() * metaphors.length)];
-    const conclusion = conclusions[Math.floor(Math.random() * conclusions.length)];
-    
-    // Construir o versículo inspirador
-    const capitalizedSubject = subject.charAt(0).toUpperCase() + subject.slice(1);
-    const verseText = `${capitalizedSubject} ${verb} ${metaphor}. ${conclusion}`;
-    
-    // Construir um sumário inspirador
-    const summaries = [
-      `Este versículo nos lembra da importância de cultivar ${subject} em nossas vidas diárias.`,
-      `A analogia entre ${subject} e ${metaphor.split(' ').slice(1).join(' ')} nos ajuda a entender seu valor eterno.`,
-      `Refletir sobre como ${subject} se relaciona com ${metaphor} pode transformar nossa perspectiva espiritual.`,
-      `Quando meditamos sobre ${subject}, encontramos força e propósito para nossa jornada.`
-    ];
-    
-    const summary = summaries[Math.floor(Math.random() * summaries.length)];
-    
-    // Construir o objeto de resposta
-    const aiGeneratedVerse = {
-      id: `ai-${Date.now()}`,
-      book: randomBook,
-      chapter: randomChapter,
-      verse: randomVerseNum,
-      text: verseText,
-      summary: summary,
-      order: -1,
-      isGenerated: true
-    };
-    
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get the current maximum verse_order
+    const { data: maxOrderData } = await supabase
+      .from('bible_verses')
+      .select('verse_order')
+      .order('verse_order', { ascending: false })
+      .limit(1);
+
+    let nextOrder = (maxOrderData?.[0]?.verse_order || 0) + 1;
+
+    const generatedVerses = [];
+
+    for (let i = 0; i < count; i++) {
+      console.log(`Generating verse ${i + 1} of ${count}`);
+
+      const prompt = `Crie um versículo bíblico inspirador em português brasileiro com as seguintes características:
+      
+1. Deve ser reconfortante e motivacional
+2. Incluir uma referência bíblica realista (livro, capítulo e versículo)
+3. O texto deve ter entre 50-150 caracteres
+4. Deve transmitir esperança, fé ou amor
+5. Use linguagem moderna mas respeitosa
+
+Retorne no seguinte formato JSON:
+{
+  "book": "Nome do livro bíblico",
+  "chapter": número_do_capítulo,
+  "verse": número_do_versículo,
+  "text": "Texto do versículo aqui",
+  "summary": "Uma explicação devocional de 2-3 frases sobre o significado e aplicação do versículo"
+}`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'Você é um especialista em textos bíblicos e devocionais. Crie versículos inspiradores que tragam esperança e fé às pessoas.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 400,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('OpenAI API error:', await response.text());
+        throw new Error(`OpenAI API returned ${response.status}`);
+      }
+
+      const openaiData = await response.json();
+      const generatedContent = openaiData.choices[0].message.content;
+      
+      console.log('Generated content:', generatedContent);
+
+      let verseData;
+      try {
+        verseData = JSON.parse(generatedContent);
+      } catch (parseError) {
+        console.error('Failed to parse OpenAI response:', generatedContent);
+        // Fallback verse if parsing fails
+        verseData = {
+          book: "Salmos",
+          chapter: 23,
+          verse: 4,
+          text: "Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo.",
+          summary: "Este versículo nos lembra que Deus está sempre conosco, especialmente nos momentos mais difíceis. Sua presença traz paz e coragem."
+        };
+      }
+
+      // Insert the new verse into the database
+      const { error: insertError } = await supabase
+        .from('bible_verses')
+        .insert({
+          book: verseData.book,
+          chapter: verseData.chapter,
+          verse: verseData.verse,
+          text: verseData.text,
+          summary: verseData.summary,
+          verse_order: nextOrder,
+          is_generated: true
+        });
+
+      if (insertError) {
+        console.error('Error inserting verse:', insertError);
+        throw insertError;
+      }
+
+      generatedVerses.push({
+        ...verseData,
+        verse_order: nextOrder,
+        is_generated: true
+      });
+
+      nextOrder++;
+    }
+
+    console.log(`Successfully generated and saved ${generatedVerses.length} verses`);
+
     return new Response(
-      JSON.stringify({ verse: aiGeneratedVerse }),
+      JSON.stringify({ 
+        success: true, 
+        message: `Generated ${generatedVerses.length} new verses`,
+        verses: generatedVerses
+      }),
       { 
         headers: { 
           ...corsHeaders, 
@@ -95,17 +150,20 @@ serve(async (req) => {
         } 
       }
     );
+
   } catch (error) {
-    console.error('Error generating verse:', error);
-    
+    console.error('Error in generate-verse function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        success: false
+      }),
       { 
-        status: 500, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 
-        } 
+        },
+        status: 500
       }
     );
   }
