@@ -25,7 +25,6 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   const { currentUser, refreshSubscription, isPro } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
-  const [portalLoading, setPortalLoading] = React.useState(false);
   const [couponCode, setCouponCode] = React.useState('');
   const [couponError, setCouponError] = React.useState('');
 
@@ -85,45 +84,9 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     }
   };
 
-  const handleManageSubscription = async () => {
-    if (!currentUser || !isPro) return;
-    
-    setPortalLoading(true);
-    
-    try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      
-      if (!token) {
-        throw new Error("Usuário não autenticado");
-      }
-      
-      const { data, error } = await supabase.functions.invoke('customer-portal', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("Não foi possível acessar o portal do cliente");
-      }
-      
-    } catch (error: any) {
-      console.error("Error accessing customer portal:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao acessar portal",
-        description: error.message || "Ocorreu um erro ao acessar o portal de gerenciamento. Tente novamente mais tarde.",
-      });
-    } finally {
-      setPortalLoading(false);
-    }
+  const handleManageSubscription = () => {
+    // Direct redirect to the specific Stripe billing URL
+    window.open('https://billing.stripe.com/p/login/4gM6oH5TO3Nj8oCfKDefC00', '_blank');
   };
 
   // Coupon input field component
@@ -181,20 +144,10 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
           <Button 
             variant="outline"
             onClick={handleManageSubscription}
-            disabled={portalLoading}
             className="w-full"
           >
-            {portalLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Acessando...
-              </>
-            ) : (
-              <>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Gerenciar assinatura
-              </>
-            )}
+            <CreditCard className="mr-2 h-4 w-4" />
+            Gerenciar assinatura
           </Button>
         )}
       </div>
@@ -273,20 +226,10 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
             <Button 
               variant="outline"
               onClick={handleManageSubscription}
-              disabled={portalLoading}
               className="w-full"
             >
-              {portalLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Acessando...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Gerenciar assinatura
-                </>
-              )}
+              <CreditCard className="mr-2 h-4 w-4" />
+              Gerenciar assinatura
             </Button>
           )}
         </CardFooter>
@@ -348,20 +291,10 @@ const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
           <Button 
             variant="outline"
             onClick={handleManageSubscription}
-            disabled={portalLoading}
             className="w-full"
           >
-            {portalLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Acessando...
-              </>
-            ) : (
-              <>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Gerenciar assinatura
-              </>
-            )}
+            <CreditCard className="mr-2 h-4 w-4" />
+            Gerenciar assinatura
           </Button>
         )}
       </div>
