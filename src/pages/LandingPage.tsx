@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -152,13 +151,6 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800">
-      {/* Ranking Panel Section - Now above the header */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-4 border-b">
-        <div className="container max-w-md mx-auto">
-          <RankingPanel limit={5} />
-        </div>
-      </div>
-
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -469,6 +461,27 @@ const LandingPage: React.FC = () => {
             <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg sm:text-xl py-6 sm:py-7 px-8 sm:px-10" asChild>
               <Link to="/login">Começar Agora</Link>
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Ranking Panel Section - Now before the footer */}
+      <section className="py-20 px-4 bg-gray-50 dark:bg-slate-800/50">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20">
+              Ranking
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              Nossos usuários mais dedicados
+            </h2>
+            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+              Veja quem está liderando no estudo da Palavra de Deus e se inspire para continuar sua jornada.
+            </p>
+          </div>
+          
+          <div className="max-w-md mx-auto">
+            <RankingPanel limit={5} />
           </div>
         </div>
       </section>

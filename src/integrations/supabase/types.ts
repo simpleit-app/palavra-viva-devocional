@@ -169,33 +169,6 @@ export type Database = {
         }
         Relationships: []
       }
-      testimonials: {
-        Row: {
-          author_name: string
-          author_role: string | null
-          created_at: string
-          id: string
-          is_featured: boolean | null
-          quote: string
-        }
-        Insert: {
-          author_name: string
-          author_role?: string | null
-          created_at?: string
-          id?: string
-          is_featured?: boolean | null
-          quote: string
-        }
-        Update: {
-          author_name?: string
-          author_role?: string | null
-          created_at?: string
-          id?: string
-          is_featured?: boolean | null
-          quote?: string
-        }
-        Relationships: []
-      }
       user_testimonials: {
         Row: {
           author_role: string | null
