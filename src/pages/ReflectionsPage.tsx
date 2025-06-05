@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/PageTitle';
 import { bibleVerses } from '@/data/bibleData';
@@ -24,11 +23,13 @@ import { supabase } from '@/integrations/supabase/client';
 import SubscriptionUpgrade from '@/components/SubscriptionUpgrade';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { calculateUserLevel } from '@/utils/achievementUtils';
+import { useBibleVerses } from '@/hooks/useBibleVerses';
 
 const FREE_PLAN_REFLECTION_LIMIT = 2;
 
 const ReflectionsPage: React.FC = () => {
   const { currentUser, updateProfile, isPro, isAuthenticated, loading } = useAuth();
+  const { verses: dbVerses } = useBibleVerses();
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [editingReflection, setEditingReflection] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -36,6 +37,9 @@ const ReflectionsPage: React.FC = () => {
   const [reflectionToDelete, setReflectionToDelete] = useState<string | null>(null);
   const [reflectionsLoading, setReflectionsLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Use database verses for Pro users, fallback to static verses for free users
+  const allVerses = isPro ? dbVerses : bibleVerses;
 
   // Load reflections when component mounts or when user changes
   useEffect(() => {
@@ -77,6 +81,7 @@ const ReflectionsPage: React.FC = () => {
       }
       
       console.log('🟢 Reflexões carregadas do banco:', data?.length || 0, data);
+      console.log('🟢 Versículos disponíveis:', allVerses.length, allVerses.map(v => ({ id: v.id, ref: `${v.book} ${v.chapter}:${v.verse}` })));
       
       const formattedReflections = data?.map(item => ({
         id: item.id,
@@ -87,6 +92,17 @@ const ReflectionsPage: React.FC = () => {
       })) || [];
       
       console.log('🟢 Reflexões formatadas:', formattedReflections.length, formattedReflections);
+      
+      // Check which verses are found/not found
+      formattedReflections.forEach(reflection => {
+        const verse = allVerses.find(v => v.id === reflection.verseId);
+        if (!verse) {
+          console.warn('🟡 Versículo não encontrado para reflexão:', reflection.verseId, reflection);
+        } else {
+          console.log('🟢 Versículo encontrado:', verse.id, `${verse.book} ${verse.chapter}:${verse.verse}`);
+        }
+      });
+      
       setReflections(formattedReflections);
       
       // Update user stats if needed
@@ -276,9 +292,17 @@ const ReflectionsPage: React.FC = () => {
   };
 
   const handleShareReflection = (reflection: UserReflection) => {
-    const verse = bibleVerses.find(v => v.id === reflection.verseId);
+    const verse = allVerses.find(v => v.id === reflection.verseId);
     
-    if (!verse) return;
+    if (!verse) {
+      console.warn('🟡 Verse not found for sharing:', reflection.verseId);
+      toast({
+        variant: "destructive",
+        title: "Erro ao compartilhar",
+        description: "Não foi possível encontrar o versículo para compartilhar.",
+      });
+      return;
+    }
     
     const shareText = `"${verse.text}" - ${verse.book} ${verse.chapter}:${verse.verse}\n\nMinha reflexão: ${reflection.text}\n\nCompartilhado via Palavra Viva`;
     
@@ -359,8 +383,39 @@ const ReflectionsPage: React.FC = () => {
       ) : (
         <div className="grid gap-6 mt-6">
           {displayReflections.map(reflection => {
-            const verse = bibleVerses.find(v => v.id === reflection.verseId);
-            if (!verse) return null;
+            const verse = allVerses.find(v => v.id === reflection.verseId);
+            
+            if (!verse) {
+              console.warn('🟡 Verse not found for reflection display:', reflection.verseId, reflection);
+              return (
+                <Card key={reflection.id} className="opacity-50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center justify-between text-base">
+                      <span className="text-red-500">
+                        Versículo não encontrado (ID: {reflection.verseId})
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {reflection.createdAt.toLocaleDateString('pt-BR')}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <p className="text-slate-700 dark:text-slate-200">
+                      {reflection.text}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => handleDeleteClick(reflection.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            }
             
             return (
               <Card key={reflection.id}>
