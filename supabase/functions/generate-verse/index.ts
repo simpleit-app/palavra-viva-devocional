@@ -37,8 +37,8 @@ serve(async (req) => {
       .limit(1);
 
     let nextOrder = (maxOrderData?.[0]?.verse_order || 0) + 1;
-
     const generatedVerses = [];
+    const successfulGenerations = [];
 
     for (let i = 0; i < count; i++) {
       console.log(`Generating verse ${i + 1} of ${count}`);
@@ -61,97 +61,104 @@ Retorne no seguinte formato JSON:
   "summary": "Uma explicação devocional de 2-3 frases sobre o significado e aplicação do versículo"
 }`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'Você é um especialista em textos bíblicos e devocionais. Crie versículos inspiradores que tragam esperança e fé às pessoas. Sempre retorne um JSON válido.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.8,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('OpenAI API error:', await response.text());
-        throw new Error(`OpenAI API returned ${response.status}`);
-      }
-
-      const openaiData = await response.json();
-      const generatedContent = openaiData.choices[0].message.content;
-      
-      console.log('Generated content:', generatedContent);
-
-      let verseData;
       try {
-        // Clean the response to extract JSON
-        const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
-        const jsonString = jsonMatch ? jsonMatch[0] : generatedContent;
-        verseData = JSON.parse(jsonString);
-      } catch (parseError) {
-        console.error('Failed to parse OpenAI response:', generatedContent);
-        // Fallback verse if parsing fails
-        verseData = {
-          book: "Salmos",
-          chapter: 23 + (i % 10),
-          verse: 1 + (i % 15),
-          text: "O Senhor é meu pastor; nada me faltará. Ele me faz repousar em verdes pastos e me guia às águas tranquilas.",
-          summary: "Este versículo nos lembra que Deus cuida de nós como um pastor cuida de suas ovelhas. Sua presença traz paz e provisão em nossa jornada."
-        };
-      }
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: 'Você é um especialista em textos bíblicos e devocionais. Crie versículos inspiradores que tragam esperança e fé às pessoas. Sempre retorne um JSON válido.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 500,
+            temperature: 0.8,
+          }),
+        });
 
-      // Generate unique ID
-      const verseId = `${verseData.book.toLowerCase().replace(/\s+/g, '-')}-${verseData.chapter}-${verseData.verse}-${Date.now()}-${i}`;
+        if (!response.ok) {
+          console.error(`OpenAI API error: ${response.status} - ${await response.text()}`);
+          continue; // Skip this iteration but continue with others
+        }
 
-      // Insert the new verse into the database
-      const { error: insertError } = await supabase
-        .from('bible_verses')
-        .insert({
+        const openaiData = await response.json();
+        const generatedContent = openaiData.choices[0].message.content;
+        
+        console.log('Generated content:', generatedContent);
+
+        let verseData;
+        try {
+          // Clean the response to extract JSON
+          const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
+          const jsonString = jsonMatch ? jsonMatch[0] : generatedContent;
+          verseData = JSON.parse(jsonString);
+        } catch (parseError) {
+          console.error('Failed to parse OpenAI response:', generatedContent);
+          // Use a fallback verse if parsing fails
+          verseData = {
+            book: "Salmos",
+            chapter: 23 + (i % 10),
+            verse: 1 + (i % 15),
+            text: "O Senhor é meu pastor; nada me faltará. Ele me faz repousar em verdes pastos e me guia às águas tranquilas.",
+            summary: "Este versículo nos lembra que Deus cuida de nós como um pastor cuida de suas ovelhas. Sua presença traz paz e provisão em nossa jornada."
+          };
+        }
+
+        // Generate unique ID
+        const verseId = `${verseData.book.toLowerCase().replace(/\s+/g, '-')}-${verseData.chapter}-${verseData.verse}-${Date.now()}-${i}`;
+
+        // Insert the new verse into the database
+        const { error: insertError } = await supabase
+          .from('bible_verses')
+          .insert({
+            id: verseId,
+            book: verseData.book,
+            chapter: verseData.chapter,
+            verse: verseData.verse,
+            text: verseData.text,
+            summary: verseData.summary,
+            verse_order: nextOrder,
+            is_generated: true
+          });
+
+        if (insertError) {
+          console.error('Error inserting verse:', insertError);
+          continue; // Continue with next verse instead of throwing
+        }
+
+        successfulGenerations.push({
           id: verseId,
-          book: verseData.book,
-          chapter: verseData.chapter,
-          verse: verseData.verse,
-          text: verseData.text,
-          summary: verseData.summary,
+          ...verseData,
           verse_order: nextOrder,
           is_generated: true
         });
 
-      if (insertError) {
-        console.error('Error inserting verse:', insertError);
-        // Continue with next verse instead of throwing
-        continue;
+        nextOrder++;
+
+      } catch (error) {
+        console.error(`Error generating verse ${i + 1}:`, error);
+        continue; // Continue with next verse
       }
-
-      generatedVerses.push({
-        id: verseId,
-        ...verseData,
-        verse_order: nextOrder,
-        is_generated: true
-      });
-
-      nextOrder++;
     }
 
-    console.log(`Successfully generated and saved ${generatedVerses.length} verses`);
+    console.log(`Successfully generated and saved ${successfulGenerations.length} out of ${count} requested verses`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Generated ${generatedVerses.length} new verses`,
-        verses: generatedVerses
+        message: `Generated ${successfulGenerations.length} new verses`,
+        verses: successfulGenerations,
+        requestedCount: count,
+        successCount: successfulGenerations.length
       }),
       { 
         headers: { 

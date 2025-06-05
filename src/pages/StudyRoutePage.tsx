@@ -38,13 +38,12 @@ const mapToBibleVerseCardType = (verse: any): BibleVerseCardType => {
 
 const StudyRoutePage: React.FC = () => {
   const { currentUser, updateProfile, isPro } = useAuth();
-  const { verses: dbVerses, loading: dbLoading, generateMoreVerses } = useBibleVerses();
+  const { verses: dbVerses, loading: dbLoading, generateMoreVerses, isGenerating } = useBibleVerses();
   const [readVerses, setReadVerses] = useState<string[]>([]);
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('unread');
-  const [isGeneratingVerses, setIsGeneratingVerses] = useState(false);
   const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const location = useLocation();
 
@@ -504,9 +503,14 @@ const StudyRoutePage: React.FC = () => {
   };
 
   const handleGenerateMoreVerses = async () => {
-    if (isGeneratingVerses) return;
+    if (isGenerating) {
+      toast({
+        title: "Geração em andamento",
+        description: "Aguarde a geração atual terminar antes de solicitar novos versículos.",
+      });
+      return;
+    }
     
-    setIsGeneratingVerses(true);
     try {
       toast({
         title: "Gerando versículos",
@@ -514,10 +518,11 @@ const StudyRoutePage: React.FC = () => {
       });
       
       const success = await generateMoreVerses(15);
-      if (success) {
+      if (!success) {
         toast({
-          title: "Versículos gerados com sucesso!",
-          description: "Novos versículos foram adicionados à sua rota de estudo.",
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível gerar novos versículos. Tente novamente.",
         });
       }
     } catch (error) {
@@ -527,8 +532,6 @@ const StudyRoutePage: React.FC = () => {
         title: "Erro",
         description: "Não foi possível gerar novos versículos.",
       });
-    } finally {
-      setIsGeneratingVerses(false);
     }
   };
 
@@ -548,11 +551,11 @@ const StudyRoutePage: React.FC = () => {
               variant="outline" 
               size="sm" 
               onClick={handleGenerateMoreVerses}
-              disabled={loading || isGeneratingVerses}
+              disabled={loading || isGenerating}
               className="flex items-center gap-2"
             >
-              <Plus className={`h-4 w-4 ${isGeneratingVerses ? 'animate-spin' : ''}`} />
-              Gerar Versículos
+              <Plus className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+              {isGenerating ? 'Gerando...' : 'Gerar Versículos'}
             </Button>
           )}
           
@@ -616,7 +619,7 @@ const StudyRoutePage: React.FC = () => {
                     <p className="text-muted-foreground mb-4">
                       Você leu todos os versículos disponíveis! Use o botão "Gerar Versículos" para adicionar mais.
                     </p>
-                    <Button variant="outline" onClick={handleGenerateMoreVerses} disabled={isGeneratingVerses}>
+                    <Button variant="outline" onClick={handleGenerateMoreVerses} disabled={isGenerating}>
                       <Plus className="h-4 w-4 mr-2" />
                       Gerar Novos Versículos
                     </Button>

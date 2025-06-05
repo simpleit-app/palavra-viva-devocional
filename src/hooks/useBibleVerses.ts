@@ -19,6 +19,7 @@ export interface BibleVerse {
 export const useBibleVerses = () => {
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const { currentUser, isPro } = useAuth();
 
@@ -41,8 +42,10 @@ export const useBibleVerses = () => {
 
       setVerses(data || []);
       
-      // Always check if we need more verses (for all users)
-      await checkAndGenerateVersesIfNeeded(data || []);
+      // Only check and generate if not already generating and we have few verses
+      if (!isGenerating && data && data.length < 20) {
+        await checkAndGenerateVersesIfNeeded(data);
+      }
     } catch (error) {
       console.error('Error in fetchVerses:', error);
       toast({
@@ -56,31 +59,25 @@ export const useBibleVerses = () => {
   };
 
   const checkAndGenerateVersesIfNeeded = async (allVerses: BibleVerse[]) => {
+    if (isGenerating) {
+      console.log('Already generating verses, skipping...');
+      return;
+    }
+
     try {
-      // Count total verses available
       const totalVerses = allVerses.length;
       console.log(`Total verses in database: ${totalVerses}`);
 
-      // If we have less than 20 verses total, generate more
+      // Generate more verses if we have less than 20 total
       if (totalVerses < 20) {
-        console.log('Generating more verses for all users...');
         const versesToGenerate = 20 - totalVerses;
+        console.log(`Need to generate ${versesToGenerate} verses for all users`);
         await generateMoreVerses(versesToGenerate);
-        
-        toast({
-          title: "Novos versículos gerados",
-          description: `${versesToGenerate} novos versículos foram adicionados à base de dados!`,
-        });
-        
-        // Refresh verses after generation
-        setTimeout(() => {
-          fetchVerses();
-        }, 2000);
         return;
       }
 
       // For Pro users, also check unread verses
-      if (currentUser && isPro) {
+      if (currentUser && isPro && totalVerses >= 20) {
         const { data: readVerses, error: readError } = await supabase
           .from('read_verses')
           .select('verse_id')
@@ -94,22 +91,12 @@ export const useBibleVerses = () => {
         const readVerseIds = readVerses?.map(rv => rv.verse_id) || [];
         const unreadVerses = allVerses.filter(verse => !readVerseIds.includes(verse.id));
 
-        console.log(`Pro user has ${unreadVerses.length} unread verses`);
+        console.log(`Pro user has ${unreadVerses.length} unread verses out of ${totalVerses} total`);
 
         // If Pro user has less than 10 unread verses, generate more
         if (unreadVerses.length < 10) {
           console.log('Generating more verses for Pro user...');
           await generateMoreVerses(15);
-          
-          toast({
-            title: "Novos versículos disponíveis",
-            description: "Geramos novos versículos especialmente para você continuar seus estudos!",
-          });
-          
-          // Refresh verses after generation
-          setTimeout(() => {
-            fetchVerses();
-          }, 2000);
         }
       }
     } catch (error) {
@@ -118,8 +105,15 @@ export const useBibleVerses = () => {
   };
 
   const generateMoreVerses = async (count: number = 10) => {
+    if (isGenerating) {
+      console.log('Already generating verses, skipping duplicate request');
+      return false;
+    }
+
+    setIsGenerating(true);
+    
     try {
-      console.log(`Generating ${count} new verses...`);
+      console.log(`Starting generation of ${count} new verses...`);
       
       const { data, error } = await supabase.functions.invoke('generate-verse', {
         body: { count }
@@ -132,16 +126,37 @@ export const useBibleVerses = () => {
           title: "Erro ao gerar versículos",
           description: "Não foi possível gerar novos versículos. Tente novamente mais tarde.",
         });
-        return;
+        return false;
       }
 
-      if (data?.success) {
-        console.log('Successfully generated verses:', data.verses?.length || count);
+      if (data?.success && data?.verses?.length > 0) {
+        console.log(`Successfully generated ${data.verses.length} verses`);
+        
+        toast({
+          title: "Novos versículos gerados",
+          description: `${data.verses.length} novos versículos foram adicionados!`,
+        });
+
+        // Refresh verses after successful generation
+        setTimeout(() => {
+          fetchVerses();
+        }, 1000);
+        
         return true;
+      } else {
+        console.log('Generation completed but no verses were returned');
+        return false;
       }
     } catch (error) {
       console.error('Error in generateMoreVerses:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar versículos",
+        description: "Erro inesperado ao gerar versículos.",
+      });
       return false;
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -173,12 +188,6 @@ export const useBibleVerses = () => {
 
   const forceGenerateVerses = async (count: number = 10) => {
     const success = await generateMoreVerses(count);
-    if (success) {
-      // Refresh verses after generation
-      setTimeout(() => {
-        fetchVerses();
-      }, 1000);
-    }
     return success;
   };
 
@@ -189,6 +198,7 @@ export const useBibleVerses = () => {
   return {
     verses,
     loading,
+    isGenerating,
     fetchVerses,
     generateMoreVerses: forceGenerateVerses,
     getRandomVerse,
