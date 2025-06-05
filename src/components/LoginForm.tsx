@@ -26,14 +26,23 @@ const LoginForm: React.FC = () => {
     setError('');
     setLoading(true);
     
+    console.log('=== INÍCIO DO PROCESSO DE AUTENTICAÇÃO ===');
+    console.log('Modo:', isSignUp ? 'SIGNUP' : 'LOGIN');
+    console.log('Email:', email);
+    console.log('Nome:', name);
+    console.log('Gênero:', gender);
+    
     try {
       if (isSignUp) {
         if (!name) {
           throw new Error('Nome é obrigatório para criar uma conta');
         }
         
-        console.log('Attempting signup with:', { name, email, gender });
-        await signUp(name, email, password, gender);
+        console.log('🔵 Iniciando processo de signup...');
+        console.log('Dados para signup:', { name, email, gender });
+        
+        const result = await signUp(name, email, password, gender);
+        console.log('🟢 Resultado do signup:', result);
         
         // Show success message for signup
         toast({
@@ -41,19 +50,24 @@ const LoginForm: React.FC = () => {
           description: "Bem-vindo ao Palavra Viva! Aguarde enquanto carregamos seu perfil...",
         });
         
-        console.log('Signup completed successfully');
+        console.log('🟢 Signup completado com sucesso');
         
       } else {
-        console.log('Attempting login with:', email);
+        console.log('🔵 Iniciando processo de login...');
         await signInWithCredentials(email, password);
         
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta!",
         });
+        
+        console.log('🟢 Login completado com sucesso');
       }
     } catch (error: any) {
-      console.error('Authentication error:', error);
+      console.error('🔴 Erro na autenticação:', error);
+      console.error('🔴 Mensagem do erro:', error.message);
+      console.error('🔴 Stack do erro:', error.stack);
+      
       // Improved error messages
       if (error.message.includes('Invalid login credentials')) {
         setError('Usuário ou senha inválidos. Por favor, verifique suas credenciais e tente novamente.');
@@ -63,6 +77,8 @@ const LoginForm: React.FC = () => {
         setError('A senha deve ter pelo menos 6 caracteres.');
       } else if (error.message.includes('Unable to validate email address')) {
         setError('Email inválido. Por favor, verifique o formato do email.');
+      } else if (error.message.includes('Email not confirmed')) {
+        setError('Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada.');
       } else {
         setError(error.message || 'Falha na autenticação. Tente novamente.');
       }

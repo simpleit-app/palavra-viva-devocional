@@ -48,15 +48,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadSession = async () => {
       try {
         setIsLoading(true);
+        console.log('🔵 Carregando sessão inicial...');
+        
         // Get current user session
         const { data: sessionData } = await supabase.auth.getSession();
+        console.log('🔵 Dados da sessão:', sessionData);
         
         if (!sessionData.session) {
+          console.log('🟡 Nenhuma sessão encontrada');
           setIsLoading(false);
           return;
         }
         
         const userId = sessionData.session.user.id;
+        console.log('🔵 ID do usuário da sessão:', userId);
         
         // Get user profile
         const { data: profileData, error: profileError } = await supabase
@@ -65,6 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', userId)
           .single();
           
+        console.log('🔵 Dados do perfil:', profileData);
+        console.log('🔵 Erro do perfil:', profileError);
+
         if (profileError) throw profileError;
 
         // Get subscription status
@@ -73,6 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('subscribed, subscription_end')
           .eq('user_id', userId)
           .single();
+
+        console.log('🔵 Dados da assinatura:', subscriptionData);
+        console.log('🔵 Erro da assinatura:', subscriptionError);
 
         // Handle case with no subscription record
         const isSubscribed = subscriptionData?.subscribed || false;
@@ -84,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsPro(isSubscriptionValid);
         
         if (profileData) {
-          setCurrentUser({
+          const user = {
             id: userId,
             name: profileData.name,
             email: profileData.email,
@@ -98,10 +109,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gender: profileData.gender,
             subscriptionEnd: subscriptionEnd ? new Date(subscriptionEnd) : undefined,
             createdAt: profileData.created_at ? new Date(profileData.created_at) : undefined
-          });
+          };
+          
+          console.log('🟢 Usuário carregado:', user);
+          setCurrentUser(user);
         }
       } catch (error) {
-        console.error("Error loading session:", error);
+        console.error("🔴 Erro ao carregar sessão:", error);
       } finally {
         setIsLoading(false);
       }
@@ -111,26 +125,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.id);
+      console.log('🔵 Mudança no estado de autenticação:', event, session?.user?.id);
       
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('🟢 Usuário logado, carregando perfil...');
+        
         // Wait a moment for the trigger to create the profile
         setTimeout(async () => {
           try {
+            console.log('🔵 Buscando perfil após login...');
+            
             const { data: profileData, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
             
+            console.log('🔵 Perfil encontrado:', profileData);
+            console.log('🔵 Erro ao buscar perfil:', profileError);
+            
             if (profileError) {
-              console.error('Profile not found, trigger may have failed:', profileError);
+              console.error('🔴 Perfil não encontrado, trigger pode ter falhado:', profileError);
               return;
             }
 
             if (profileData) {
-              console.log('Profile loaded after signup:', profileData);
-              setCurrentUser({
+              console.log('🟢 Perfil carregado após signup/login:', profileData);
+              
+              const user = {
                 id: session.user.id,
                 name: profileData.name,
                 email: profileData.email,
@@ -143,13 +165,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 nickname: profileData.nickname,
                 gender: profileData.gender,
                 createdAt: profileData.created_at ? new Date(profileData.created_at) : undefined
-              });
+              };
+              
+              console.log('🟢 Definindo usuário atual:', user);
+              setCurrentUser(user);
             }
           } catch (error) {
-            console.error('Error loading profile after signup:', error);
+            console.error('🔴 Erro ao carregar perfil após signup/login:', error);
           }
-        }, 1000); // Wait 1 second for trigger to complete
+        }, 2000); // Aumentei para 2 segundos para dar mais tempo ao trigger
       } else if (event === 'SIGNED_OUT') {
+        console.log('🟡 Usuário deslogado');
         setCurrentUser(null);
         setIsPro(false);
       }
@@ -162,10 +188,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔵 Tentativa de login para:', email);
+      
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('🔴 Erro no login:', error);
+        throw error;
+      }
+      
+      console.log('🟢 Login realizado com sucesso');
     } catch (error: any) {
-      console.error("Error signing in:", error);
+      console.error("🔴 Erro ao fazer login:", error);
       throw new Error(error.message || "Erro ao fazer login.");
     }
   };
@@ -175,7 +209,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (name: string, email: string, password: string, gender: string = 'male') => {
     try {
-      console.log('Starting signup process for:', email);
+      console.log('🔵 Iniciando processo de signup para:', email);
+      console.log('🔵 Dados do usuário:', { name, email, gender });
       
       // First, create the user account
       const { data, error } = await supabase.auth.signUp({
@@ -196,20 +231,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        console.error('Signup error:', error);
+        console.error('🔴 Erro no signup:', error);
         throw error;
       }
 
-      console.log('Signup successful:', data.user?.id);
+      console.log('🟢 Signup realizado com sucesso:', data);
+      console.log('🔵 Usuário criado:', data.user?.id);
+      console.log('🔵 Sessão criada:', data.session ? 'SIM' : 'NÃO');
       
       if (data.user) {
-        // The trigger should create the profile automatically
-        // The auth state change listener will handle loading the profile
-        console.log('User created, waiting for trigger to create profile...');
+        console.log('🔵 Usuário criado, aguardando trigger criar perfil...');
+        
+        // Se não há sessão, significa que precisa confirmar email
+        if (!data.session) {
+          console.log('🟡 Email de confirmação necessário');
+          throw new Error('Por favor, confirme seu email antes de continuar. Verifique sua caixa de entrada.');
+        }
       }
       
     } catch (error: any) {
-      console.error("Error signing up:", error);
+      console.error("🔴 Erro ao criar conta:", error);
       throw new Error(error.message || "Erro ao criar a conta.");
     }
   };
