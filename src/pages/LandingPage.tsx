@@ -48,6 +48,7 @@ const planFeatures = {
     "Acesso ao dashboard"
   ],
   pro: [
+    "Acesso a todas as passagens bíblicas",
     "Reflexões ilimitadas",
     "Rotas de estudo personalizadas",
     "Todas as conquistas disponíveis",
@@ -352,12 +353,6 @@ const LandingPage: React.FC = () => {
                       <span>{feature}</span>
                     </li>
                   ))}
-                  {planFeatures.pro.slice(0, 2).map((feature, index) => (
-                    <li key={index} className="flex items-center text-lg text-gray-400">
-                      <X className="h-6 w-6 text-gray-300 mr-3 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
                 </ul>
               </CardContent>
               <CardFooter>
@@ -381,12 +376,6 @@ const LandingPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {planFeatures.free.map((feature, index) => (
-                    <li key={index} className="flex items-center text-lg">
-                      <Check className="h-6 w-6 text-green-500 mr-3 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
                   {planFeatures.pro.map((feature, index) => (
                     <li key={index} className="flex items-center text-lg">
                       <Check className="h-6 w-6 text-green-500 mr-3 flex-shrink-0" />
