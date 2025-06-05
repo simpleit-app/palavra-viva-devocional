@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useToast } from '@/hooks/use-toast';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +19,7 @@ const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   
   const { signInWithCredentials, signUp } = useAuth();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +31,32 @@ const LoginForm: React.FC = () => {
         if (!name) {
           throw new Error('Nome é obrigatório para criar uma conta');
         }
+        
         await signUp(name, email, password, gender);
+        
+        // Show success message for signup
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao Palavra Viva! Você foi automaticamente logado.",
+        });
+        
+        // The auth context will automatically redirect to dashboard after successful signup
+        
       } else {
         await signInWithCredentials(email, password);
+        
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo de volta!",
+        });
       }
     } catch (error: any) {
       console.error('Authentication error:', error);
       // Improved error messages
       if (error.message.includes('Invalid login credentials')) {
         setError('Usuário ou senha inválidos. Por favor, verifique suas credenciais e tente novamente.');
+      } else if (error.message.includes('User already registered')) {
+        setError('Este email já está cadastrado. Tente fazer login ou use outro email.');
       } else {
         setError(error.message || 'Falha na autenticação. Tente novamente.');
       }

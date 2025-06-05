@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -140,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (name: string, email: string, password: string, gender: string = 'male') => {
     try {
+      // First, create the user account
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -156,25 +156,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       });
+      
       if (error) throw error;
 
-      // Create a user profile in the 'profiles' table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user?.id,
-          name: name,
-          email: email,
-          photo_url: '',
-          level: 1,
-          total_reflections: 0,
-          chapters_read: 0,
-          consecutive_days: 0,
-          points: 0,
-          gender
-        });
+      // The profile will be created automatically by the trigger
+      // But we need to ensure the user is properly authenticated
+      if (data.user && !data.user.email_confirmed_at) {
+        // For development/testing, we'll proceed without email confirmation
+        // In production, you might want to handle email confirmation differently
+        console.log('User created successfully, profile will be created by trigger');
+      }
 
-      if (profileError) throw profileError;
+      // The auth state change will handle loading the user profile
+      // No need to manually create profile here as trigger handles it
+      
     } catch (error: any) {
       console.error("Error signing up:", error);
       throw new Error(error.message || "Erro ao criar a conta.");

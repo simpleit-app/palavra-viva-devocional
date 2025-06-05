@@ -47,14 +47,17 @@ export type Database = {
       }
       biblical_names: {
         Row: {
+          gender: string | null
           id: number
           name: string
         }
         Insert: {
+          gender?: string | null
           id?: number
           name: string
         }
         Update: {
+          gender?: string | null
           id?: number
           name?: string
         }
@@ -264,6 +267,10 @@ export type Database = {
           author_name: string
           author_role: string
         }[]
+      }
+      generate_biblical_nickname_by_gender: {
+        Args: { user_gender?: string }
+        Returns: string
       }
       generate_unique_biblical_nickname: {
         Args: Record<PropertyKey, never>
