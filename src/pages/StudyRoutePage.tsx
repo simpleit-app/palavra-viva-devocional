@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/PageTitle';
@@ -213,20 +212,6 @@ const StudyRoutePage: React.FC = () => {
     }
     
     try {
-      // First, check if there's a reflection for this verse (now required)
-      const userReflection = reflections.find(
-        (ref) => ref.verseId === verseId && ref.userId === currentUser.id
-      );
-      
-      if (!userReflection) {
-        toast({
-          variant: "destructive",
-          title: "Reflexão necessária",
-          description: "Adicione uma reflexão antes de marcar o versículo como lido.",
-        });
-        return;
-      }
-      
       // Check if the verse is already marked as read in database to avoid duplicates
       const { data: existingRead, error: checkError } = await supabase
         .from('read_verses')
@@ -314,6 +299,58 @@ const StudyRoutePage: React.FC = () => {
         variant: "destructive",
         title: "Erro ao marcar como lido",
         description: "Não foi possível atualizar seu progresso. Tente novamente mais tarde.",
+      });
+    }
+  };
+
+  const handleMarkAsUnread = async (verseId: string) => {
+    if (!currentUser) return;
+    
+    console.log('Attempting to mark verse as unread:', verseId);
+    
+    if (!readVerses.includes(verseId)) {
+      console.log('Verse is not marked as read, skipping');
+      return;
+    }
+    
+    try {
+      // Remove from read_verses table
+      console.log('Removing verse from read_verses');
+      const { error: readVerseError } = await supabase
+        .from('read_verses')
+        .delete()
+        .eq('verse_id', verseId)
+        .eq('user_id', currentUser.id);
+        
+      if (readVerseError && readVerseError.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error removing read verse:', readVerseError);
+        throw readVerseError;
+      }
+      
+      // Update local state
+      console.log('Updating local state after marking as unread');
+      const updatedReadVerses = readVerses.filter(v => v !== verseId);
+      setReadVerses(updatedReadVerses);
+      
+      // Update profile statistics
+      await updateProfile({
+        chaptersRead: updatedReadVerses.length
+      });
+      
+      // Switch to unread tab since verse is now unread
+      setActiveTab('unread');
+      
+      toast({
+        title: "Versículo marcado como não lido",
+        description: "O versículo foi movido para a aba de não lidos.",
+      });
+      
+    } catch (error) {
+      console.error("Error marking verse as unread:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao marcar como não lido",
+        description: "Não foi possível atualizar o status do versículo.",
       });
     }
   };
@@ -409,20 +446,7 @@ const StudyRoutePage: React.FC = () => {
     console.log('Deleting reflection:', reflectionId, 'for verse:', verseId);
     
     try {
-      // First remove from read_verses to ensure the verse becomes unread
-      console.log('Removing verse from read_verses');
-      const { error: readVerseError } = await supabase
-        .from('read_verses')
-        .delete()
-        .eq('verse_id', verseId)
-        .eq('user_id', currentUser.id);
-        
-      if (readVerseError && readVerseError.code !== 'PGRST116') { // Ignore "not found" errors
-        console.error('Error removing read verse:', readVerseError);
-        throw readVerseError;
-      }
-      
-      // Then delete the reflection
+      // Delete only the reflection - do NOT mark verse as unread
       console.log('Deleting reflection from database');
       const { error: reflectionError } = await supabase
         .from('reflections')
@@ -435,26 +459,19 @@ const StudyRoutePage: React.FC = () => {
         throw reflectionError;
       }
       
-      // Update local state
-      console.log('Updating local state after deletion');
+      // Update local state - only remove reflection
+      console.log('Updating local state after reflection deletion');
       const updatedReflections = reflections.filter(ref => ref.id !== reflectionId);
       setReflections(updatedReflections);
       
-      const updatedReadVerses = readVerses.filter(v => v !== verseId);
-      setReadVerses(updatedReadVerses);
-      
       // Update profile statistics
       await updateProfile({
-        chaptersRead: updatedReadVerses.length,
         totalReflections: updatedReflections.length
       });
       
-      // Switch to unread tab since verse is now unread
-      setActiveTab('unread');
-      
       toast({
         title: "Reflexão excluída",
-        description: "A reflexão foi removida e o versículo marcado como não lido.",
+        description: "A reflexão foi removida com sucesso.",
       });
       
     } catch (error) {
@@ -584,6 +601,7 @@ const StudyRoutePage: React.FC = () => {
                       isRead={false}
                       userReflection={userReflection}
                       onMarkAsRead={handleMarkAsRead}
+                      onMarkAsUnread={handleMarkAsUnread}
                       onSaveReflection={handleSaveReflection}
                       onDeleteReflection={handleDeleteReflection}
                       highlight={scrollToVerseId === verse.id}
@@ -616,6 +634,7 @@ const StudyRoutePage: React.FC = () => {
                       isRead={true}
                       userReflection={userReflection}
                       onMarkAsRead={handleMarkAsRead}
+                      onMarkAsUnread={handleMarkAsUnread}
                       onSaveReflection={handleSaveReflection}
                       onDeleteReflection={handleDeleteReflection}
                       highlight={scrollToVerseId === verse.id}
