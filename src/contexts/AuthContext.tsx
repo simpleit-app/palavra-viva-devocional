@@ -110,9 +110,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadSession();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        loadSession();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session?.user?.id);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Wait a moment for the trigger to create the profile
+        setTimeout(async () => {
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (profileError) {
+              console.error('Profile not found, trigger may have failed:', profileError);
+              return;
+            }
+
+            if (profileData) {
+              console.log('Profile loaded after signup:', profileData);
+              setCurrentUser({
+                id: session.user.id,
+                name: profileData.name,
+                email: profileData.email,
+                photoUrl: profileData.photo_url,
+                level: profileData.level,
+                totalReflections: profileData.total_reflections,
+                chaptersRead: profileData.chapters_read,
+                consecutiveDays: profileData.consecutive_days,
+                points: profileData.points,
+                nickname: profileData.nickname,
+                gender: profileData.gender,
+                createdAt: profileData.created_at ? new Date(profileData.created_at) : undefined
+              });
+            }
+          } catch (error) {
+            console.error('Error loading profile after signup:', error);
+          }
+        }, 1000); // Wait 1 second for trigger to complete
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         setIsPro(false);
@@ -139,6 +175,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (name: string, email: string, password: string, gender: string = 'male') => {
     try {
+      console.log('Starting signup process for:', email);
+      
       // First, create the user account
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -157,18 +195,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (error) throw error;
-
-      // The profile will be created automatically by the trigger
-      // But we need to ensure the user is properly authenticated
-      if (data.user && !data.user.email_confirmed_at) {
-        // For development/testing, we'll proceed without email confirmation
-        // In production, you might want to handle email confirmation differently
-        console.log('User created successfully, profile will be created by trigger');
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
       }
 
-      // The auth state change will handle loading the user profile
-      // No need to manually create profile here as trigger handles it
+      console.log('Signup successful:', data.user?.id);
+      
+      if (data.user) {
+        // The trigger should create the profile automatically
+        // The auth state change listener will handle loading the profile
+        console.log('User created, waiting for trigger to create profile...');
+      }
       
     } catch (error: any) {
       console.error("Error signing up:", error);

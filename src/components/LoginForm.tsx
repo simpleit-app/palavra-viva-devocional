@@ -32,17 +32,19 @@ const LoginForm: React.FC = () => {
           throw new Error('Nome é obrigatório para criar uma conta');
         }
         
+        console.log('Attempting signup with:', { name, email, gender });
         await signUp(name, email, password, gender);
         
         // Show success message for signup
         toast({
           title: "Conta criada com sucesso!",
-          description: "Bem-vindo ao Palavra Viva! Você foi automaticamente logado.",
+          description: "Bem-vindo ao Palavra Viva! Aguarde enquanto carregamos seu perfil...",
         });
         
-        // The auth context will automatically redirect to dashboard after successful signup
+        console.log('Signup completed successfully');
         
       } else {
+        console.log('Attempting login with:', email);
         await signInWithCredentials(email, password);
         
         toast({
@@ -57,6 +59,10 @@ const LoginForm: React.FC = () => {
         setError('Usuário ou senha inválidos. Por favor, verifique suas credenciais e tente novamente.');
       } else if (error.message.includes('User already registered')) {
         setError('Este email já está cadastrado. Tente fazer login ou use outro email.');
+      } else if (error.message.includes('Password should be at least 6 characters')) {
+        setError('A senha deve ter pelo menos 6 caracteres.');
+      } else if (error.message.includes('Unable to validate email address')) {
+        setError('Email inválido. Por favor, verifique o formato do email.');
       } else {
         setError(error.message || 'Falha na autenticação. Tente novamente.');
       }
