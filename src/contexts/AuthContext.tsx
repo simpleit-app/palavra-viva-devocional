@@ -152,6 +152,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (profileData) {
               console.log('🟢 Perfil carregado após signup/login:', profileData);
               
+              // Se o nickname não existe, gerar um
+              if (!profileData.nickname) {
+                console.log('🔵 Nickname não encontrado, gerando um novo...');
+                try {
+                  const { data: nicknameResult, error: nicknameError } = await supabase
+                    .rpc('generate_biblical_nickname_by_gender', { 
+                      user_gender: profileData.gender || 'male' 
+                    });
+                  
+                  if (!nicknameError && nicknameResult) {
+                    console.log('🔵 Nickname gerado:', nicknameResult);
+                    
+                    // Atualizar o perfil com o nickname
+                    const { error: updateError } = await supabase
+                      .from('profiles')
+                      .update({ nickname: nicknameResult })
+                      .eq('id', session.user.id);
+                    
+                    if (!updateError) {
+                      profileData.nickname = nicknameResult;
+                      console.log('🟢 Nickname atualizado no perfil');
+                    } else {
+                      console.error('🔴 Erro ao atualizar nickname:', updateError);
+                    }
+                  } else {
+                    console.error('🔴 Erro ao gerar nickname:', nicknameError);
+                  }
+                } catch (error) {
+                  console.error('🔴 Erro na geração do nickname:', error);
+                }
+              }
+              
               // Check subscription status
               console.log('🔵 Verificando assinatura após login...');
               const { data: subscriptionResponse, error: subscriptionError } = await supabase.functions.invoke('check-subscription', {
