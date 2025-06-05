@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardFooter, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { UserReflection } from '@/data/bibleData';
-import { BookOpen, CheckCircle, Edit, Trash2 } from 'lucide-react';
+import { BookOpen, CheckCircle, Edit, Trash2, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -35,6 +35,7 @@ interface BibleVerseCardProps {
   isRead: boolean;
   userReflection?: UserReflection;
   onMarkAsRead: (verseId: string) => void;
+  onMarkAsUnread: (verseId: string) => void;
   onSaveReflection: (verseId: string, text: string) => void;
   onDeleteReflection?: (reflectionId: string, verseId: string) => void;
   highlight?: boolean;
@@ -45,6 +46,7 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
   isRead,
   userReflection,
   onMarkAsRead,
+  onMarkAsUnread,
   onSaveReflection,
   onDeleteReflection,
   highlight = false
@@ -83,31 +85,43 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
               </span>
             )}
           </div>
-          {!isRead && (
-            <div className="flex items-center gap-2">
-              {!showReflectionInput && (
+          <div className="flex items-center gap-2">
+            {!isRead ? (
+              <>
+                {!showReflectionInput && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowReflectionInput(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit className="h-4 w-4" /> 
+                    Adicionar reflexão
+                  </Button>
+                )}
                 <Button 
                   size="sm" 
-                  variant="outline"
-                  onClick={() => setShowReflectionInput(true)}
+                  variant="outline" 
+                  onClick={() => onMarkAsRead(verse.id)}
                   className="flex items-center gap-1"
+                  disabled={!reflectionText.trim()}
                 >
-                  <Edit className="h-4 w-4" /> 
-                  Adicionar reflexão
+                  <BookOpen className="h-4 w-4" /> 
+                  Marcar como lido
                 </Button>
-              )}
+              </>
+            ) : (
               <Button 
                 size="sm" 
                 variant="outline" 
-                onClick={() => onMarkAsRead(verse.id)}
+                onClick={() => onMarkAsUnread(verse.id)}
                 className="flex items-center gap-1"
-                disabled={!reflectionText.trim()}
               >
-                <BookOpen className="h-4 w-4" /> 
-                Marcar como lido
+                <RotateCcw className="h-4 w-4" /> 
+                Marcar como não lido
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -142,7 +156,6 @@ const BibleVerseCard: React.FC<BibleVerseCardProps> = ({
                         <AlertDialogTitle>Excluir reflexão</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja excluir esta reflexão? 
-                          Esta ação também irá desmarcar o versículo como lido.
                           Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
