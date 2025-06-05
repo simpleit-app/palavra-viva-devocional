@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface BibleVerse {
   id: string;
@@ -19,6 +20,7 @@ export const useBibleVerses = () => {
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { currentUser, isPro } = useAuth();
 
   const fetchVerses = async () => {
     try {
@@ -39,9 +41,9 @@ export const useBibleVerses = () => {
 
       setVerses(data || []);
       
-      // Check if we need more verses (less than 10 available)
-      if ((data?.length || 0) < 10) {
-        await generateMoreVerses();
+      // Check if we need more verses for Pro users
+      if (isPro && currentUser) {
+        await checkAndGenerateVersesForProUser(data || []);
       }
     } catch (error) {
       console.error('Error in fetchVerses:', error);
@@ -55,16 +57,56 @@ export const useBibleVerses = () => {
     }
   };
 
-  const generateMoreVerses = async () => {
+  const checkAndGenerateVersesForProUser = async (allVerses: BibleVerse[]) => {
+    if (!currentUser || !isPro) return;
+
     try {
-      console.log('Generating more verses...');
+      // Get user's read verses
+      const { data: readVerses, error: readError } = await supabase
+        .from('read_verses')
+        .select('verse_id')
+        .eq('user_id', currentUser.id);
+
+      if (readError) {
+        console.error('Error fetching read verses:', readError);
+        return;
+      }
+
+      const readVerseIds = readVerses?.map(rv => rv.verse_id) || [];
+      const unreadVerses = allVerses.filter(verse => !readVerseIds.includes(verse.id));
+
+      console.log(`Pro user has ${unreadVerses.length} unread verses`);
+
+      // If Pro user has less than 5 unread verses, generate more
+      if (unreadVerses.length < 5) {
+        console.log('Generating more verses for Pro user...');
+        await generateMoreVerses(10); // Generate 10 new verses
+        
+        toast({
+          title: "Novos versículos disponíveis",
+          description: "Geramos novos versículos especialmente para você continuar seus estudos!",
+        });
+      }
+    } catch (error) {
+      console.error('Error checking verses for Pro user:', error);
+    }
+  };
+
+  const generateMoreVerses = async (count: number = 5) => {
+    try {
+      console.log(`Generating ${count} new verses...`);
       
       const { data, error } = await supabase.functions.invoke('generate-verse', {
-        body: { count: 5 }
+        body: { count }
       });
 
       if (error) {
         console.error('Error generating verses:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao gerar versículos",
+          description: "Não foi possível gerar novos versículos. Tente novamente mais tarde.",
+        });
         return;
       }
 
@@ -72,11 +114,6 @@ export const useBibleVerses = () => {
         console.log('Successfully generated verses:', data.verses);
         // Refresh the verses list
         await fetchVerses();
-        
-        toast({
-          title: "Novos versículos gerados",
-          description: `${data.verses?.length || 5} novos versículos foram criados com IA.`,
-        });
       }
     } catch (error) {
       console.error('Error in generateMoreVerses:', error);
@@ -111,7 +148,7 @@ export const useBibleVerses = () => {
 
   useEffect(() => {
     fetchVerses();
-  }, []);
+  }, [currentUser, isPro]);
 
   return {
     verses,

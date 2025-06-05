@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/PageTitle';
@@ -13,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, RefreshCcw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { useBibleVerses } from '@/hooks/useBibleVerses';
 
 // Define a type for the location state
 interface LocationState {
@@ -23,7 +23,7 @@ interface LocationState {
 const FREE_PLAN_VERSE_LIMIT = 2;
 
 // Map Bible Data verses to BibleVerseCard compatible format
-const mapToBibleVerseCardType = (verse: typeof bibleVerses[0]): BibleVerseCardType => {
+const mapToBibleVerseCardType = (verse: any): BibleVerseCardType => {
   return {
     id: verse.id,
     title: verse.book + " " + verse.chapter + ":" + verse.verse,
@@ -38,6 +38,7 @@ const mapToBibleVerseCardType = (verse: typeof bibleVerses[0]): BibleVerseCardTy
 
 const StudyRoutePage: React.FC = () => {
   const { currentUser, updateProfile, isPro } = useAuth();
+  const { verses: dbVerses, loading: dbLoading } = useBibleVerses();
   const [readVerses, setReadVerses] = useState<string[]>([]);
   const [reflections, setReflections] = useState<UserReflection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,11 +46,13 @@ const StudyRoutePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('unread');
   const verseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const location = useLocation();
-  const hasTriggeredRefresh = useRef(false);
 
   // Extract scrollToVerse from location state
   const locationState = location.state as LocationState;
   const scrollToVerseId = locationState?.scrollToVerse;
+
+  // Use database verses for Pro users, fallback to static verses for free users
+  const allVerses = isPro ? dbVerses : bibleVerses;
 
   useEffect(() => {
     if (currentUser && !dataLoaded) {
@@ -69,6 +72,12 @@ const StudyRoutePage: React.FC = () => {
       }, 100);
     }
   }, [scrollToVerseId, loading]);
+
+  useEffect(() => {
+    if (!dbLoading) {
+      setLoading(false);
+    }
+  }, [dbLoading]);
 
   const loadUserData = async () => {
     if (!currentUser) return;
@@ -381,7 +390,7 @@ const StudyRoutePage: React.FC = () => {
   };
 
   // Filter verses based on read status
-  const availableVerses = isPro ? bibleVerses : bibleVerses.slice(0, FREE_PLAN_VERSE_LIMIT);
+  const availableVerses = isPro ? allVerses : allVerses.slice(0, FREE_PLAN_VERSE_LIMIT);
   
   // Separate verses into read and unread
   const readVersesData = availableVerses.filter(verse => readVerses.includes(verse.id));
@@ -428,6 +437,16 @@ const StudyRoutePage: React.FC = () => {
         </Alert>
       )}
 
+      {isPro && unreadVersesData.length === 0 && !loading && (
+        <Alert className="mb-6">
+          <InfoIcon className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Como usuário Pro, novos versículos são gerados automaticamente quando necessário. 
+            Aguarde um momento enquanto preparamos mais conteúdo para você!
+          </AlertDescription>
+        </Alert>
+      )}
+
       {hasReachedFreeLimit && (
         <div className="mb-6">
           <SubscriptionUpgrade />
@@ -452,10 +471,23 @@ const StudyRoutePage: React.FC = () => {
           <TabsContent value="unread" className="mt-6 space-y-6">
             {unreadVersesData.length === 0 ? (
               <div className="text-center py-8 border rounded-lg">
-                <p className="text-muted-foreground mb-4">Parabéns! Você leu todos os versículos disponíveis.</p>
-                <Button variant="outline" onClick={() => setActiveTab('read')}>
-                  Ver versículos lidos
-                </Button>
+                {isPro ? (
+                  <div>
+                    <p className="text-muted-foreground mb-4">
+                      Estamos gerando novos versículos para você! Atualize a página em alguns instantes.
+                    </p>
+                    <Button variant="outline" onClick={handleRefreshData}>
+                      Atualizar agora
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-muted-foreground mb-4">Parabéns! Você leu todos os versículos disponíveis.</p>
+                    <Button variant="outline" onClick={() => setActiveTab('read')}>
+                      Ver versículos lidos
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               unreadVersesData.map((verse) => {
@@ -518,10 +550,10 @@ const StudyRoutePage: React.FC = () => {
         </Tabs>
       )}
 
-      {!isPro && bibleVerses.length > FREE_PLAN_VERSE_LIMIT && (
+      {!isPro && allVerses.length > FREE_PLAN_VERSE_LIMIT && (
         <div className="mt-8 text-center">
           <p className="text-muted-foreground mb-4">
-            Atualize para o plano Pro para acessar {bibleVerses.length - FREE_PLAN_VERSE_LIMIT} textos adicionais.
+            Atualize para o plano Pro para acessar versículos ilimitados gerados por IA.
           </p>
           <SubscriptionUpgrade variant="inline" />
         </div>
