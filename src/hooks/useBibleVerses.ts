@@ -124,7 +124,18 @@ export const useBibleVerses = () => {
         toast({
           variant: "destructive",
           title: "Erro ao gerar versículos",
-          description: "Não foi possível gerar novos versículos. Tente novamente mais tarde.",
+          description: "Não foi possível gerar novos versículos. Verifique sua cota da OpenAI.",
+        });
+        return false;
+      }
+
+      // Check if the response indicates a quota error
+      if (data?.success === false && data?.error) {
+        console.error('Generation failed:', data.error);
+        toast({
+          variant: "destructive",
+          title: "Cota da OpenAI excedida",
+          description: "Sua cota da OpenAI foi excedida. Verifique seu plano em platform.openai.com",
         });
         return false;
       }
@@ -145,6 +156,11 @@ export const useBibleVerses = () => {
         return true;
       } else {
         console.log('Generation completed but no verses were returned');
+        toast({
+          variant: "destructive",
+          title: "Falha na geração",
+          description: "Não foi possível gerar versículos. Verifique sua conta OpenAI.",
+        });
         return false;
       }
     } catch (error) {
@@ -152,7 +168,7 @@ export const useBibleVerses = () => {
       toast({
         variant: "destructive",
         title: "Erro ao gerar versículos",
-        description: "Erro inesperado ao gerar versículos.",
+        description: "Erro inesperado ao gerar versículos. Verifique sua conta OpenAI.",
       });
       return false;
     } finally {

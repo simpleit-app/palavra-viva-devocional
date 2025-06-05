@@ -37,7 +37,6 @@ serve(async (req) => {
       .limit(1);
 
     let nextOrder = (maxOrderData?.[0]?.verse_order || 0) + 1;
-    const generatedVerses = [];
     const successfulGenerations = [];
 
     for (let i = 0; i < count; i++) {
@@ -86,7 +85,15 @@ Retorne no seguinte formato JSON:
         });
 
         if (!response.ok) {
-          console.error(`OpenAI API error: ${response.status} - ${await response.text()}`);
+          const errorText = await response.text();
+          console.error(`OpenAI API error: ${response.status} - ${errorText}`);
+          
+          // Check for quota exceeded error
+          if (response.status === 429) {
+            console.error('OpenAI quota exceeded - stopping generation');
+            break; // Stop trying more verses
+          }
+          
           continue; // Skip this iteration but continue with others
         }
 
@@ -146,11 +153,38 @@ Retorne no seguinte formato JSON:
 
       } catch (error) {
         console.error(`Error generating verse ${i + 1}:`, error);
+        
+        // If it's a quota error, break the loop
+        if (error.message && error.message.includes('quota')) {
+          console.error('Quota exceeded - stopping generation');
+          break;
+        }
+        
         continue; // Continue with next verse
       }
     }
 
     console.log(`Successfully generated and saved ${successfulGenerations.length} out of ${count} requested verses`);
+
+    // Return appropriate response based on success
+    if (successfulGenerations.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Não foi possível gerar versículos. Verifique sua cota da OpenAI.",
+          message: "Quota da OpenAI pode ter sido excedida ou há outro problema de API.",
+          requestedCount: count,
+          successCount: 0
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          },
+          status: 400
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -173,7 +207,8 @@ Retorne no seguinte formato JSON:
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        success: false
+        success: false,
+        message: "Erro interno na geração de versículos"
       }),
       { 
         headers: { 
