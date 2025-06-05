@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { count = 1 } = await req.json();
+    const { count = 10 } = await req.json();
     
     console.log(`Generating ${count} new verses with OpenAI`);
 
@@ -47,9 +47,10 @@ serve(async (req) => {
       
 1. Deve ser reconfortante e motivacional
 2. Incluir uma referência bíblica realista (livro, capítulo e versículo)
-3. O texto deve ter entre 50-150 caracteres
-4. Deve transmitir esperança, fé ou amor
+3. O texto deve ter entre 80-200 caracteres
+4. Deve transmitir esperança, fé, amor, sabedoria ou coragem
 5. Use linguagem moderna mas respeitosa
+6. Varie entre diferentes livros bíblicos (Salmos, Provérbios, João, Romanos, Mateus, etc.)
 
 Retorne no seguinte formato JSON:
 {
@@ -67,19 +68,19 @@ Retorne no seguinte formato JSON:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
-              content: 'Você é um especialista em textos bíblicos e devocionais. Crie versículos inspiradores que tragam esperança e fé às pessoas.'
+              content: 'Você é um especialista em textos bíblicos e devocionais. Crie versículos inspiradores que tragam esperança e fé às pessoas. Sempre retorne um JSON válido.'
             },
             {
               role: 'user',
               content: prompt
             }
           ],
-          max_tokens: 400,
-          temperature: 0.7,
+          max_tokens: 500,
+          temperature: 0.8,
         }),
       });
 
@@ -95,23 +96,30 @@ Retorne no seguinte formato JSON:
 
       let verseData;
       try {
-        verseData = JSON.parse(generatedContent);
+        // Clean the response to extract JSON
+        const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : generatedContent;
+        verseData = JSON.parse(jsonString);
       } catch (parseError) {
         console.error('Failed to parse OpenAI response:', generatedContent);
         // Fallback verse if parsing fails
         verseData = {
           book: "Salmos",
-          chapter: 23,
-          verse: 4,
-          text: "Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo.",
-          summary: "Este versículo nos lembra que Deus está sempre conosco, especialmente nos momentos mais difíceis. Sua presença traz paz e coragem."
+          chapter: 23 + (i % 10),
+          verse: 1 + (i % 15),
+          text: "O Senhor é meu pastor; nada me faltará. Ele me faz repousar em verdes pastos e me guia às águas tranquilas.",
+          summary: "Este versículo nos lembra que Deus cuida de nós como um pastor cuida de suas ovelhas. Sua presença traz paz e provisão em nossa jornada."
         };
       }
+
+      // Generate unique ID
+      const verseId = `${verseData.book.toLowerCase().replace(/\s+/g, '-')}-${verseData.chapter}-${verseData.verse}-${Date.now()}-${i}`;
 
       // Insert the new verse into the database
       const { error: insertError } = await supabase
         .from('bible_verses')
         .insert({
+          id: verseId,
           book: verseData.book,
           chapter: verseData.chapter,
           verse: verseData.verse,
@@ -123,10 +131,12 @@ Retorne no seguinte formato JSON:
 
       if (insertError) {
         console.error('Error inserting verse:', insertError);
-        throw insertError;
+        // Continue with next verse instead of throwing
+        continue;
       }
 
       generatedVerses.push({
+        id: verseId,
         ...verseData,
         verse_order: nextOrder,
         is_generated: true
