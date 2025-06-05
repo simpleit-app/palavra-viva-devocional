@@ -15,12 +15,15 @@ serve(async (req) => {
   try {
     const { count = 10 } = await req.json();
     
-    console.log(`Generating ${count} new verses with Gemini`);
+    console.log(`Generating ${count} new verses with Gemini AI`);
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
+      console.error('GEMINI_API_KEY not found in environment variables');
       throw new Error('GEMINI_API_KEY not found in environment variables');
     }
+
+    console.log('Gemini API Key loaded successfully');
 
     // Create the Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -61,6 +64,8 @@ Retorne no seguinte formato JSON:
 }`;
 
       try {
+        console.log('Making request to Gemini API...');
+        
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: {
@@ -95,6 +100,8 @@ Retorne no seguinte formato JSON:
         }
 
         const geminiData = await response.json();
+        console.log('Gemini response received:', geminiData);
+        
         const generatedContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (!generatedContent) {
@@ -143,6 +150,8 @@ Retorne no seguinte formato JSON:
           console.error('Error inserting verse:', insertError);
           continue; // Continue with next verse instead of throwing
         }
+
+        console.log(`Successfully generated and saved verse ${i + 1}`);
 
         successfulGenerations.push({
           id: verseId,
