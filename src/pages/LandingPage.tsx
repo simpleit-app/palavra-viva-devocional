@@ -149,6 +149,13 @@ const LandingPage: React.FC = () => {
     navigate('/login');
   };
 
+  // Helper function to determine testimonials grid layout
+  const getTestimonialsGridClass = (count: number) => {
+    if (count === 1) return "grid grid-cols-1 max-w-2xl mx-auto gap-8";
+    if (count === 2) return "grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8";
+    return "grid grid-cols-1 md:grid-cols-3 gap-8";
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800">
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b">
@@ -412,7 +419,7 @@ const LandingPage: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className={getTestimonialsGridClass(testimonials.length)}>
             {loading ? (
               // Render skeletons while loading
               Array(3).fill(0).map((_, index) => (
@@ -426,15 +433,15 @@ const LandingPage: React.FC = () => {
             ) : testimonials.length > 0 ? (
               // Render actual testimonials if available
               testimonials.map((testimonial, index) => (
-                <div key={index} className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-sm">
-                  <svg className="w-12 h-12 text-primary mb-6" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <div key={index} className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-lg shadow-sm">
+                  <svg className="w-8 h-8 sm:w-12 sm:h-12 text-primary mb-4 sm:mb-6" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 8v6H6v10h10V14h-4V8h-2zm14 0v6h-4v10h10V14h-4V8h-2z"/>
                   </svg>
-                  <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-6">&ldquo;{testimonial.quote}&rdquo;</p>
+                  <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 leading-relaxed">&ldquo;{testimonial.quote}&rdquo;</p>
                   <div>
-                    <p className="font-bold text-lg">{testimonial.author_name}</p>
+                    <p className="font-bold text-base sm:text-lg">{testimonial.author_name}</p>
                     {testimonial.author_role && (
-                      <p className="text-gray-500 dark:text-gray-400">{testimonial.author_role}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{testimonial.author_role}</p>
                     )}
                   </div>
                 </div>

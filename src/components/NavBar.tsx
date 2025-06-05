@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -39,8 +38,8 @@ const NavBar: React.FC = () => {
   const handleLogout = async () => {
     try {
       await signOut();
-      // After signOut, navigate to login page
-      navigate('/login');
+      // Redirect to landing page instead of login
+      navigate('/');
       toast({
         title: "Logout realizado",
         description: "Você saiu da aplicação com sucesso.",
