@@ -124,7 +124,7 @@ export const useBibleVerses = () => {
         toast({
           variant: "destructive",
           title: "Erro ao gerar versículos",
-          description: "Não foi possível gerar novos versículos. Verifique sua cota da OpenAI.",
+          description: "Não foi possível gerar novos versículos. Verifique sua cota do Gemini.",
         });
         return false;
       }
@@ -134,8 +134,8 @@ export const useBibleVerses = () => {
         console.error('Generation failed:', data.error);
         toast({
           variant: "destructive",
-          title: "Cota da OpenAI excedida",
-          description: "Sua cota da OpenAI foi excedida. Verifique seu plano em platform.openai.com",
+          title: "Cota do Gemini excedida",
+          description: "Sua cota do Gemini foi excedida. Verifique seu plano na Google Cloud Console",
         });
         return false;
       }
@@ -159,7 +159,7 @@ export const useBibleVerses = () => {
         toast({
           variant: "destructive",
           title: "Falha na geração",
-          description: "Não foi possível gerar versículos. Verifique sua conta OpenAI.",
+          description: "Não foi possível gerar versículos. Verifique sua conta Gemini.",
         });
         return false;
       }
@@ -168,7 +168,7 @@ export const useBibleVerses = () => {
       toast({
         variant: "destructive",
         title: "Erro ao gerar versículos",
-        description: "Erro inesperado ao gerar versículos. Verifique sua conta OpenAI.",
+        description: "Erro inesperado ao gerar versículos. Verifique sua conta Gemini.",
       });
       return false;
     } finally {
