@@ -75,24 +75,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (profileError) throw profileError;
 
-        // Get subscription status
-        const { data: subscriptionData, error: subscriptionError } = await supabase
-          .from('subscribers')
-          .select('subscribed, subscription_end')
-          .eq('user_id', userId)
-          .single();
+        // Get subscription status by calling check-subscription function
+        console.log('🔵 Verificando status de assinatura...');
+        const { data: subscriptionResponse, error: subscriptionError } = await supabase.functions.invoke('check-subscription', {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        });
 
-        console.log('🔵 Dados da assinatura:', subscriptionData);
-        console.log('🔵 Erro da assinatura:', subscriptionError);
+        console.log('🔵 Resposta da verificação de assinatura:', subscriptionResponse);
+        console.log('🔵 Erro da verificação de assinatura:', subscriptionError);
 
-        // Handle case with no subscription record
-        const isSubscribed = subscriptionData?.subscribed || false;
-        const subscriptionEnd = subscriptionData?.subscription_end || null;
+        // Handle subscription data
+        const isSubscribed = subscriptionResponse?.subscribed || false;
+        const subscriptionEnd = subscriptionResponse?.subscription_end || null;
         
-        // Check if subscription is valid
-        const isSubscriptionValid = isSubscribed && subscriptionEnd && new Date(subscriptionEnd) > new Date();
-        
-        setIsPro(isSubscriptionValid);
+        setIsPro(isSubscribed);
+        console.log('🔵 Status Pro definido:', isSubscribed);
         
         if (profileData) {
           const user = {
@@ -112,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           
           console.log('🟢 Usuário carregado:', user);
+          console.log('🟢 Status Pro final:', isSubscribed);
           setCurrentUser(user);
         }
       } catch (error) {
@@ -152,6 +152,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (profileData) {
               console.log('🟢 Perfil carregado após signup/login:', profileData);
               
+              // Check subscription status
+              console.log('🔵 Verificando assinatura após login...');
+              const { data: subscriptionResponse, error: subscriptionError } = await supabase.functions.invoke('check-subscription', {
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+              });
+
+              console.log('🔵 Resposta da assinatura após login:', subscriptionResponse);
+              
+              const isSubscribed = subscriptionResponse?.subscribed || false;
+              const subscriptionEnd = subscriptionResponse?.subscription_end || null;
+              
+              setIsPro(isSubscribed);
+              console.log('🔵 Status Pro após login:', isSubscribed);
+              
               const user = {
                 id: session.user.id,
                 name: profileData.name,
@@ -164,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 points: profileData.points,
                 nickname: profileData.nickname,
                 gender: profileData.gender,
+                subscriptionEnd: subscriptionEnd ? new Date(subscriptionEnd) : undefined,
                 createdAt: profileData.created_at ? new Date(profileData.created_at) : undefined
               };
               
@@ -173,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (error) {
             console.error('🔴 Erro ao carregar perfil após signup/login:', error);
           }
-        }, 2000); // Aumentei para 2 segundos para dar mais tempo ao trigger
+        }, 2000);
       } else if (event === 'SIGNED_OUT') {
         console.log('🟡 Usuário deslogado');
         setCurrentUser(null);
@@ -305,26 +322,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!currentUser) return;
       
-      // Get subscription status
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('subscribers')
-        .select('subscribed, subscription_end')
-        .eq('user_id', currentUser.id)
-        .single();
+      console.log('🔵 Atualizando status de assinatura...');
+      const session = await supabase.auth.getSession();
+      
+      if (!session.data.session) return;
+      
+      const { data: subscriptionResponse, error: subscriptionError } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+      });
 
-      if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-        console.error("Error fetching subscription:", subscriptionError);
+      console.log('🔵 Resposta da atualização de assinatura:', subscriptionResponse);
+
+      if (subscriptionError) {
+        console.error("Error refreshing subscription:", subscriptionError);
         return;
       }
 
-      // Handle case with no subscription record
-      const isSubscribed = subscriptionData?.subscribed || false;
-      const subscriptionEnd = subscriptionData?.subscription_end || null;
+      const isSubscribed = subscriptionResponse?.subscribed || false;
+      const subscriptionEnd = subscriptionResponse?.subscription_end || null;
       
-      // Check if subscription is valid
-      const isSubscriptionValid = isSubscribed && subscriptionEnd && new Date(subscriptionEnd) > new Date();
-      
-      setIsPro(isSubscriptionValid);
+      setIsPro(isSubscribed);
+      console.log('🔵 Status Pro atualizado:', isSubscribed);
       
       if (currentUser && subscriptionEnd) {
         setCurrentUser({
