@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -163,7 +164,7 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <img 
-              src="/public/assets/logo.png" 
+              src="/assets/logo.png" 
               alt="Palavra Viva Logo" 
               className="h-10 w-auto"
             />
@@ -483,7 +484,7 @@ const LandingPage: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-3 mb-6 md:mb-0">
               <img 
-                src="/public/assets/logo.png" 
+                src="/assets/logo.png" 
                 alt="Palavra Viva Logo" 
                 className="h-8 w-auto"
               />

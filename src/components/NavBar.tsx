@@ -60,7 +60,7 @@ const NavBar: React.FC = () => {
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <Link to="/dashboard" className="flex items-center space-x-3">
           <img 
-            src="/public/assets/logo.png" 
+            src="/assets/logo.png" 
             alt="Palavra Viva Logo" 
             className="h-8 w-auto"
           />
