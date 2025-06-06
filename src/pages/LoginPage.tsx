@@ -45,7 +45,7 @@ const LoginPage: React.FC = () => {
         <div className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img 
-              src="/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png" 
+              src="/public/assets/logo.png" 
               alt="Palavra Viva Logo" 
               className="h-12 w-auto"
             />

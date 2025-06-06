@@ -163,7 +163,7 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <img 
-              src="/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png" 
+              src="/public/assets/logo.png" 
               alt="Palavra Viva Logo" 
               className="h-10 w-auto"
             />
@@ -483,7 +483,7 @@ const LandingPage: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-3 mb-6 md:mb-0">
               <img 
-                src="/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png" 
+                src="/public/assets/logo.png" 
                 alt="Palavra Viva Logo" 
                 className="h-8 w-auto"
               />
