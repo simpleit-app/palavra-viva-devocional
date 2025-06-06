@@ -161,17 +161,13 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-celestial-50 to-white dark:from-slate-900 dark:to-slate-800">
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary text-white p-2 rounded-md">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0"></path>
-                <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0"></path>
-                <path d="M3 6v13"></path>
-                <path d="M12 6v13"></path>
-                <path d="M21 6v13"></path>
-              </svg>
-            </div>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white">Palavra Viva</h1>
+          <div className="flex items-center gap-3">
+            <img 
+              src="/assets/logo.png" 
+              alt="Palavra Viva Logo" 
+              className="h-10 w-auto"
+            />
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">Palavra Viva</h1>
           </div>
           
           {/* Desktop Navigation */}
@@ -485,16 +481,12 @@ const LandingPage: React.FC = () => {
       <footer className="bg-gray-100 dark:bg-slate-900 py-8 px-4">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center gap-2 mb-6 md:mb-0">
-              <div className="bg-primary text-white p-2 rounded-md">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0"></path>
-                  <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0"></path>
-                  <path d="M3 6v13"></path>
-                  <path d="M12 6v13"></path>
-                  <path d="M21 6v13"></path>
-                </svg>
-              </div>
+            <div className="flex items-center gap-3 mb-6 md:mb-0">
+              <img 
+                src="/assets/logo.png" 
+                alt="Palavra Viva Logo" 
+                className="h-8 w-auto"
+              />
               <h1 className="text-xl font-bold">Palavra Viva</h1>
             </div>
             

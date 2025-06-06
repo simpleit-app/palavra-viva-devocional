@@ -43,7 +43,14 @@ const LoginPage: React.FC = () => {
 
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">Palavra Viva</h1>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img 
+              src="/assets/logo.png" 
+              alt="Palavra Viva Logo" 
+              className="h-12 w-auto"
+            />
+            <h1 className="text-3xl font-bold">Palavra Viva</h1>
+          </div>
           <p className="text-muted-foreground">Faça login para continuar</p>
         </div>
         
