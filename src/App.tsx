@@ -17,6 +17,7 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import AdminCreator from "./components/AdminCreator";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 // Use LandingPage directly without wrapper since RankingPanel is now within it
 const EnhancedLandingPage = () => <LandingPage />;
@@ -47,6 +48,7 @@ const App = () => (
           <AuthProvider>
             <Toaster />
             <Sonner />
+            <PWAInstallPrompt />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<EnhancedLandingPage />} />

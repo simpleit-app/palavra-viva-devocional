@@ -8,6 +8,20 @@
     <meta name="description" content="Aplicativo de estudo bíblico com autenticação e gamificação" />
     <meta name="author" content="Palavra Viva" />
 
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Palavra Viva" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- App Icons -->
+    <link rel="icon" type="image/png" href="/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png" />
+    <link rel="apple-touch-icon" href="/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png" />
+
     <meta property="og:title" content="Palavra Viva | Estudo Bíblico" />
     <meta property="og:description" content="Aplicativo de estudo bíblico com autenticação e gamificação" />
     <meta property="og:type" content="website" />
@@ -23,5 +37,20 @@
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

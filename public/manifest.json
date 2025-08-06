@@ -1,0 +1,28 @@
+{
+  "name": "Palavra Viva - Estudo Bíblico",
+  "short_name": "Palavra Viva",
+  "description": "Aplicativo de estudo bíblico com gamificação e versículos diários",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e293b",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["education", "lifestyle"],
+  "lang": "pt-BR",
+  "dir": "ltr"
+}
