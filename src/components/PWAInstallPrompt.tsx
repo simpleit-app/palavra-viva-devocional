@@ -37,6 +37,7 @@ const PWAInstallPrompt = () => {
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
+      console.log('PWA install prompt triggered');
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       
@@ -48,6 +49,10 @@ const PWAInstallPrompt = () => {
       }
     };
 
+    // Check if browser supports PWA installation
+    const isSupported = 'serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window;
+    console.log('PWA installation supported:', isSupported);
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
@@ -56,14 +61,27 @@ const PWAInstallPrompt = () => {
   }, [isMobile]);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      console.log('No deferred prompt available');
+      return;
+    }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setShowPrompt(false);
-      setIsInstalled(true);
+    try {
+      console.log('Triggering PWA install prompt');
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      console.log('PWA install outcome:', outcome);
+      
+      if (outcome === 'accepted') {
+        setShowPrompt(false);
+        setIsInstalled(true);
+        console.log('PWA installation accepted');
+      } else {
+        console.log('PWA installation dismissed');
+      }
+    } catch (error) {
+      console.error('PWA installation error:', error);
     }
     
     setDeferredPrompt(null);

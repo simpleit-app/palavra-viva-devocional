@@ -13,13 +13,19 @@
       "src": "/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
       "src": "/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png",
-      "sizes": "512x512",
+      "sizes": "512x512", 
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
+    },
+    {
+      "src": "/lovable-uploads/5dcb6370-4fc0-4778-a8ee-9da81a458b6e.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["education", "lifestyle"],
