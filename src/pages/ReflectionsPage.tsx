@@ -304,19 +304,28 @@ const ReflectionsPage: React.FC = () => {
       return;
     }
     
-    const shareText = `"${verse.text}" - ${verse.book} ${verse.chapter}:${verse.verse}\n\nMinha reflexão: ${reflection.text}\n\nCompartilhado via Palavra Viva`;
+    // Create elegant WhatsApp message format
+    const shareText = `📖 *${verse.book} ${verse.chapter}:${verse.verse}*
+
+"_${verse.text}_"
+
+💭 *Minha reflexão:*
+${reflection.text}
+
+---
+_Compartilhado pelo app Palavra Viva_
+🔗 https://palavra-viva.lovableproject.com`;
+
+    // Create WhatsApp URL with encoded text
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     
-    if (navigator.share) {
-      navigator.share({
-        title: `Reflexão sobre ${verse.book} ${verse.chapter}:${verse.verse}`,
-        text: shareText,
-      }).catch(err => {
-        console.error('Erro ao compartilhar:', err);
-        copyToClipboard(shareText);
-      });
-    } else {
-      copyToClipboard(shareText);
-    }
+    // Open WhatsApp
+    window.open(whatsappUrl, '_blank');
+    
+    toast({
+      title: "Compartilhamento aberto",
+      description: "Sua reflexão foi formatada para o WhatsApp!",
+    });
   };
 
   const copyToClipboard = (text: string) => {
