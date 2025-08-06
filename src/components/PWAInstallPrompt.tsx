@@ -20,18 +20,25 @@ const PWAInstallPrompt = () => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
+    // Clear any previous dismissal for testing (remove this line in production)
+    localStorage.removeItem('pwa-prompt-dismissed');
+    
     // Check if app is already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isInWebAppiOS = (window.navigator as any).standalone === true;
     
+    console.log('PWA Status:', { isStandalone, isInWebAppiOS, isMobile });
+    
     if (isStandalone || isInWebAppiOS) {
       setIsInstalled(true);
+      console.log('App is already installed');
       return;
     }
 
     // Check if user already dismissed the prompt
     const dismissed = localStorage.getItem('pwa-prompt-dismissed');
     if (dismissed) {
+      console.log('PWA prompt was previously dismissed');
       return;
     }
 
@@ -41,24 +48,30 @@ const PWAInstallPrompt = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       
-      // Show prompt only on mobile devices
+      // Show prompt on mobile devices
       if (isMobile) {
+        console.log('Showing PWA install prompt for mobile');
         setTimeout(() => {
           setShowPrompt(true);
-        }, 3000); // Show after 3 seconds
+        }, 2000); // Show after 2 seconds
       }
     };
 
-    // Check if browser supports PWA installation
-    const isSupported = 'serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window;
-    console.log('PWA installation supported:', isSupported);
+    // For testing: force show prompt after 3 seconds on mobile if no beforeinstallprompt
+    const testTimeout = setTimeout(() => {
+      if (isMobile && !deferredPrompt) {
+        console.log('Force showing PWA prompt for testing');
+        setShowPrompt(true);
+      }
+    }, 3000);
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearTimeout(testTimeout);
     };
-  }, [isMobile]);
+  }, [isMobile, deferredPrompt]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) {
@@ -92,8 +105,13 @@ const PWAInstallPrompt = () => {
     localStorage.setItem('pwa-prompt-dismissed', 'true');
   };
 
-  // Don't show if not mobile, already installed, or no prompt available
-  if (!isMobile || isInstalled || !showPrompt || !deferredPrompt) {
+  // Show if mobile and (has prompt OR is testing mode)
+  if (!isMobile || isInstalled) {
+    return null;
+  }
+
+  // Show if we have a prompt or if we're forcing it to show
+  if (!showPrompt) {
     return null;
   }
 
