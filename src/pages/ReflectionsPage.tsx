@@ -314,7 +314,7 @@ ${reflection.text}
 
 ---
 _Compartilhado pelo app Palavra Viva_
-🔗 https://palavra-viva.lovableproject.com`;
+🔗 https://palavraviva.simpleit.app.br`;
 
     // Create WhatsApp URL with encoded text
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
